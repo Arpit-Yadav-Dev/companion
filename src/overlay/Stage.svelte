@@ -1,0 +1,233 @@
+<script lang="ts">
+  import { onMount, onDestroy } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+  import type { HitRect, ReminderShowPayload } from "../shared/types";
+  import { Director, type SceneState, type EntranceSide } from "./director";
+  import SvgCharacter from "./SvgCharacter.svelte";
+  import Bubble from "./Bubble.svelte";
+
+  let sceneState = $state<SceneState>("hidden");
+  let line = $state("");
+  let buttonsVisible = $state(false);
+  let entranceSide = $state<EntranceSide>("left");
+  let yesLabel = $state("YES");
+  let laterLabel = $state("Remind me later");
+
+  let characterEl: HTMLDivElement | undefined = $state();
+  let bubbleEl: HTMLDivElement | undefined = $state();
+
+  const director = new Director({
+    onStateChange: (s) => (sceneState = s),
+    onLineChange: (l) => (line = l),
+    onButtonsVisibleChange: (v) => (buttonsVisible = v),
+    onEntranceSideChange: (s) => (entranceSide = s),
+  });
+
+  function reportHitRegions() {
+    const rects: HitRect[] = [];
+    if (sceneState !== "hidden") {
+      if (characterEl) {
+        const r = characterEl.getBoundingClientRect();
+        rects.push({ x: r.x, y: r.y, width: r.width, height: r.height });
+      }
+      if (bubbleEl && buttonsVisible) {
+        const r = bubbleEl.getBoundingClientRect();
+        rects.push({ x: r.x, y: r.y, width: r.width, height: r.height });
+      }
+    }
+    invoke("set_hit_regions", { rects });
+  }
+
+  function onYes() {
+    director.choose("yes");
+  }
+  function onLater() {
+    director.choose("later");
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (!buttonsVisible) return;
+    if (e.key === "y" || e.key === "Y") onYes();
+    else if (e.key === "l" || e.key === "L") onLater();
+    else if (e.key === "Escape") onLater();
+  }
+
+  let resizeObserver: ResizeObserver | undefined;
+
+  onMount(() => {
+    const webview = getCurrentWebviewWindow();
+
+    const unlistenPromise = webview.listen<ReminderShowPayload>(
+      "reminder://show",
+      async (event) => {
+        // Show the window first — requestAnimationFrame never fires on a
+        // hidden window in WKWebView, so anything waiting on a frame
+        // before this point would hang forever.
+        await invoke("overlay_ready");
+        yesLabel = event.payload.yesLabel;
+        laterLabel = event.payload.laterLabel;
+        director.playScene(event.payload);
+      },
+    );
+
+    resizeObserver = new ResizeObserver(() => reportHitRegions());
+    window.addEventListener("keydown", onKeydown);
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+      window.removeEventListener("keydown", onKeydown);
+      resizeObserver?.disconnect();
+    };
+  });
+
+  onDestroy(() => {
+    resizeObserver?.disconnect();
+  });
+
+  $effect(() => {
+    // Re-observe whenever the elements this effect reads change identity
+    // (e.g. first render), and re-report whenever state/buttons change.
+    if (characterEl) resizeObserver?.observe(characterEl);
+    if (bubbleEl) resizeObserver?.observe(bubbleEl);
+    sceneState;
+    buttonsVisible;
+    queueMicrotask(reportHitRegions);
+  });
+</script>
+
+<div class="stage">
+  {#if sceneState !== "hidden"}
+    <div class="scene side-{entranceSide}">
+      <div class="bubble-wrap" bind:this={bubbleEl}>
+        {#if line}
+          <Bubble
+            text={line}
+            {yesLabel}
+            {laterLabel}
+            showButtons={buttonsVisible}
+            {onYes}
+            onLater={onLater}
+          />
+        {/if}
+      </div>
+      <div class="character-wrap state-{sceneState}" bind:this={characterEl}>
+        <SvgCharacter {sceneState} mirrored={entranceSide === "right"} />
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  :global(html, body) {
+    margin: 0;
+    background: transparent;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .scene {
+    position: absolute;
+    bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .scene.side-left {
+    left: 4rem;
+  }
+  .scene.side-right {
+    right: 4rem;
+  }
+
+  .bubble-wrap,
+  .character-wrap {
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Walk-in/out: slide between the screen edge and the resting spot. The
+     resting position is 0; walk_in starts off-screen and animates to 0,
+     walk_out animates from 0 back off-screen. Mirror the character so it
+     visually faces the direction it's walking. */
+  .character-wrap {
+    transform: translateX(0);
+  }
+
+  .side-left .character-wrap.state-walk_in {
+    animation: slide-in-from-left 1.2s ease-out both;
+  }
+  .side-left .character-wrap.state-walk_out {
+    animation: slide-out-to-left 1.2s ease-in both;
+  }
+  .side-right .character-wrap.state-walk_in {
+    animation: slide-in-from-right 1.2s ease-out both;
+  }
+  .side-right .character-wrap.state-walk_out {
+    animation: slide-out-to-right 1.2s ease-in both;
+  }
+
+  .side-right .character-wrap {
+    transform: scaleX(-1);
+  }
+
+  @keyframes slide-in-from-left {
+    from {
+      transform: translateX(-60vw);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes slide-out-to-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-60vw);
+    }
+  }
+  @keyframes slide-in-from-right {
+    from {
+      transform: translateX(60vw) scaleX(-1);
+    }
+    to {
+      transform: translateX(0) scaleX(-1);
+    }
+  }
+  @keyframes slide-out-to-right {
+    from {
+      transform: translateX(0) scaleX(-1);
+    }
+    to {
+      transform: translateX(60vw) scaleX(-1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .character-wrap.state-walk_in,
+    .character-wrap.state-walk_out {
+      animation: none;
+    }
+    .scene {
+      animation: crossfade 300ms ease both;
+    }
+    @keyframes crossfade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  }
+</style>

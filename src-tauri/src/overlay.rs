@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, LogicalPosition, LogicalSize, Manager, PhysicalPosition, Runtime, WebviewUrl,
-    WebviewWindowBuilder,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, Runtime,
+    WebviewUrl, WebviewWindowBuilder,
 };
 
 pub const OVERLAY_LABEL: &str = "overlay";
@@ -22,6 +22,18 @@ pub struct HitRect {
     pub y: f64,
     pub width: f64,
     pub height: f64,
+}
+
+/// The global cursor position converted into the overlay webview's own
+/// logical/CSS coordinate space, broadcast on `overlay://cursor` at the
+/// same ~33ms cadence as the hit-region poll. Lets the frontend do things
+/// like eye-tracking even while the window is click-through (and so isn't
+/// receiving native `mousemove` events at all).
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CursorPosition {
+    pub x: f64,
+    pub y: f64,
 }
 
 /// Shared state for the hit-region polling loop: the latest rects reported
@@ -210,6 +222,20 @@ fn start_hit_region_polling<R: Runtime>(app: AppHandle<R>) {
                     let _ = window.set_ignore_cursor_events(true);
                     state.ignoring.store(true, Ordering::Relaxed);
                 }
+
+                // Forward the cursor position to the frontend regardless of
+                // ignore-cursor-events state: the window being click-through
+                // means it doesn't receive native mousemove events, but
+                // things like eye-tracking still need to know where the
+                // cursor is even when it's outside the character's hit rect.
+                let _ = window.emit_to(
+                    OVERLAY_LABEL,
+                    "overlay://cursor",
+                    CursorPosition {
+                        x: local_x,
+                        y: local_y,
+                    },
+                );
             }
 
             thread::sleep(Duration::from_millis(33));

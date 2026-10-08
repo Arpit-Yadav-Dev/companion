@@ -96,6 +96,39 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   clean, app launches, overlay window created hidden with no Dock/taskbar
   entry). Same code path should work unmodified on Windows.
 
+## Phase 3: "Sip" character + director
+
+- **Eye-tracking gotcha (important, cross-platform-relevant):** the
+  character's pupils originally tracked the cursor via a DOM `mousemove`
+  listener (`window.addEventListener("mousemove", ...)`). This only ever
+  fired once the cursor had already been hovered/clicked on the character
+  at least once, because the overlay window is click-through
+  (`set_ignore_cursor_events(true)`) everywhere except directly over an
+  active hit rect — and a window that's ignoring cursor events does not
+  receive native mouse events from the OS at all outside that rect. Fixed
+  by having the existing Rust-side hit-region polling thread
+  (`overlay.rs::start_hit_region_polling`, already sampling the global
+  cursor at ~33ms) also broadcast the cursor's position, converted into
+  the overlay's own logical coordinate space, on a new `overlay://cursor`
+  event; `SvgCharacter.svelte` listens for that instead of DOM
+  `mousemove`. This is pure Tauri API (`emit_to` / `WebviewWindow::listen`)
+  with no macOS-specific pieces, so it should work unmodified on Windows
+  — but it's worth a deliberate check there too, since Win32's own
+  equivalent of "a window with click-through set doesn't receive mouse
+  events" needs to hold for the same reasoning to apply.
+
+- **Mirrored-pupil bug**: when the character enters from the right side of
+  the screen, `Stage.svelte` mirrors it with `scaleX(-1)` on its wrapper
+  div so it visually faces the direction of travel. `getBoundingClientRect()`
+  on the character's root element already reflects that mirrored,
+  post-transform screen position correctly, but the *offset* computed
+  from cursor-to-character-center needs negating on the x-axis before
+  being applied inside the (also mirrored) SVG's own coordinate space —
+  otherwise the pupils visibly move opposite to the cursor. Fixed by
+  passing a `mirrored` prop down from `Stage.svelte` (which already knows
+  `entranceSide`) into `SvgCharacter.svelte`. Pure CSS/math, no
+  platform-specific code.
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show
