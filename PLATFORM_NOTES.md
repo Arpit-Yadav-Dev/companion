@@ -129,6 +129,42 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   `entranceSide`) into `SvgCharacter.svelte`. Pure CSS/math, no
   platform-specific code.
 
+## Phase 4: scheduler + store
+
+- **Idle detection** (`src-tauri/src/idle.rs`) is the one genuinely
+  OS-specific piece this phase. macOS has no safe-rust crate already in
+  our dependency tree exposing `CGEventSourceSecondsSinceLastEventType`,
+  so it's a small hand-written `extern "C"` binding against the
+  already-linked `CoreGraphics` framework (linked transitively via
+  `core-graphics`, a dependency of `tauri`/`objc2-core-graphics`, so this
+  adds no new linker step). Two constants had to be sourced carefully
+  rather than guessed:
+  - `kCGAnyInputEventType` is `0xFFFFFFFF` (`u32::MAX`), confirmed by
+    reading the actual SDK header on this machine
+    (`CoreGraphics.framework/Headers/CGEventTypes.h`:
+    `#define kCGAnyInputEventType ((CGEventType)(~0))`) — *not* `0`
+    (`kCGEventNull`, a different, specific event type), which would have
+    silently measured "seconds since last null event" instead of idle
+    time.
+  - `kCGEventSourceStateHIDSystemState` = `1`, for real hardware input as
+    opposed to events posted by other processes.
+  Entirely isolated in `#[cfg(target_os = "macos")]`; the `#[cfg(not(...))]`
+  fallback returns `None` (treated as "not idle" by the scheduler) until
+  Phase 9 implements the Windows path via `GetLastInputInfo` from
+  `user32.dll` (see the stub's doc comment in `idle.rs` for the exact
+  approach: `GetTickCount() - lastInputInfo.dwTime`).
+
+- **Scheduler tick loop, store, stats** (`scheduler.rs`, `reminders.rs`,
+  `stats.rs`): pure Tauri/tokio/chrono, no OS-specific code — the 1Hz tick
+  loop, active-hours/day-of-week checks, snooze/pause/DND, and the daily
+  stats log all use portable APIs and should need zero changes for
+  Windows.
+
+- **Live tray countdown** (`tray.rs`): `MenuItem::set_text()` + a 15s
+  ticker, cross-platform Tauri API. No platform branch, but worth a visual
+  check on Windows that the tray menu item text updates the same way (no
+  known reason it wouldn't).
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show
@@ -137,5 +173,8 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   one used on macOS.
 - Test autostart via the registry `Run` key path.
 - Test single-instance and window-focus-on-relaunch behavior.
+- Implement `idle::idle_duration()` for Windows via `GetLastInputInfo`
+  (user32.dll) — see the doc comment in `idle.rs`'s `#[cfg(not(target_os
+  = "macos"))]` stub.
 - No GitHub Actions / cross-compiled Windows builds until explicitly
   requested (Phase 9).

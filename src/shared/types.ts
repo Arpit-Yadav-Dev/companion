@@ -24,3 +24,44 @@ export interface HitRect {
   width: number;
   height: number;
 }
+
+export interface ActiveHours {
+  startMinute: number; // minutes since midnight, local time
+  endMinute: number;
+}
+
+/** 0 = Sunday ... 6 = Saturday, matching chrono's Weekday::num_days_from_sunday(). */
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface Reminder {
+  id: string;
+  enabled: boolean;
+  emoji: string;
+  title: string;
+  intervalMin: number;
+  activeHours: ActiveHours;
+  daysOfWeek: DayOfWeek[];
+  lines: string[];
+  yesLabel: string;
+  laterLabel: string;
+  snoozeMin: number;
+  prop: string | null;
+}
+
+export type PauseDuration = "thirty_min" | "one_hour" | "until_tomorrow";
+
+export interface SchedulerStatus {
+  active: boolean;
+  pausedUntil: string | null; // ISO 8601, or null if not paused
+  nextReminderId: string | null;
+  nextFireAt: string | null; // ISO 8601
+}
+
+export interface DailyStats {
+  date: string; // YYYY-MM-DD, local
+  glasses: number;
+  goal: number;
+  yesCount: number;
+  laterCount: number;
+  missedCount: number;
+}

@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Runtime};
 
 use crate::overlay;
+use crate::scheduler::{self, PauseDuration, SchedulerStatus};
+use crate::tray;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct HitRectPayload {
@@ -55,28 +57,47 @@ pub fn overlay_ready<R: Runtime>(app: AppHandle<R>) {
 }
 
 /// Called by the overlay frontend when the director finishes a scene
-/// (yes/later/timeout/skip). For Phase 2 this just hides the overlay again;
-/// the scheduler (Phase 4) will log the response and reschedule.
+/// (yes/later/timeout/skip). Logs the response to stats and reschedules
+/// the reminder, then hides the overlay.
 #[tauri::command]
 pub fn reminder_response<R: Runtime>(app: AppHandle<R>, payload: ReminderResponsePayload) {
-    eprintln!(
-        "reminder {} resolved with choice {}",
-        payload.reminder_id, payload.choice
-    );
+    scheduler::handle_response(&app, &payload.reminder_id, &payload.choice);
     let _ = overlay::hide(&app);
+    tray::refresh_tray_text(&app);
 }
 
-/// Wired to the tray's "Test reminder now" item: shows the overlay with a
-/// placeholder water reminder so the whole show/click-through/button flow
-/// can be exercised without the scheduler.
-pub fn trigger_test_reminder<R: Runtime>(app: &AppHandle<R>) {
-    let payload = ReminderShowPayload {
-        reminder_id: "test".into(),
-        emoji: "💧".into(),
-        lines: vec!["Hey — this is a test reminder!".into()],
-        yes_label: "YES".into(),
-        later_label: "Remind me later".into(),
-        snooze_min: 10,
+/// Wired to the tray's "Test reminder now" item and the Settings "Test"
+/// button per reminder: fires a reminder immediately, bypassing active
+/// hours/pause/DND.
+#[tauri::command]
+pub fn trigger_test_reminder<R: Runtime>(app: AppHandle<R>, reminder_id: Option<String>) {
+    scheduler::trigger_now(&app, reminder_id.as_deref());
+}
+
+#[tauri::command]
+pub fn pause_reminders<R: Runtime>(app: AppHandle<R>, duration: String) {
+    let duration = match duration.as_str() {
+        "thirty_min" => PauseDuration::ThirtyMin,
+        "one_hour" => PauseDuration::OneHour,
+        _ => PauseDuration::UntilTomorrow,
     };
-    let _ = app.emit_to(overlay::OVERLAY_LABEL, "reminder://show", payload);
+    scheduler::pause(&app, duration);
+    tray::refresh_tray_text(&app);
+}
+
+#[tauri::command]
+pub fn resume_reminders<R: Runtime>(app: AppHandle<R>) {
+    scheduler::resume(&app);
+    tray::refresh_tray_text(&app);
+}
+
+#[tauri::command]
+pub fn set_dnd<R: Runtime>(app: AppHandle<R>, enabled: bool) {
+    scheduler::set_dnd(&app, enabled);
+    tray::refresh_tray_text(&app);
+}
+
+#[tauri::command]
+pub fn scheduler_status<R: Runtime>(app: AppHandle<R>) -> SchedulerStatus {
+    scheduler::status(&app)
 }

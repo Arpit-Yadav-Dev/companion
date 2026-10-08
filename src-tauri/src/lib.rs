@@ -1,5 +1,9 @@
 mod commands;
+mod idle;
 mod overlay;
+mod reminders;
+mod scheduler;
+mod stats;
 mod tray;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -25,7 +29,13 @@ pub fn run() {
             commands::set_hit_regions,
             commands::overlay_ready,
             commands::reminder_response,
+            commands::trigger_test_reminder,
+            commands::pause_reminders,
+            commands::resume_reminders,
+            commands::set_dnd,
+            commands::scheduler_status,
         ])
+        .manage(scheduler::SchedulerState::default())
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -42,6 +52,8 @@ pub fn run() {
             overlay::create(app.handle())?;
 
             tray::setup_tray(app.handle())?;
+
+            scheduler::start(app.handle());
 
             Ok(())
         })
