@@ -19,100 +19,156 @@
   }
 </script>
 
+<h1 class="panel-title">General</h1>
+<p class="panel-subtitle">Your name, startup behavior, and how the character moves and sounds.</p>
+
 {#if prefs}
-  <h2>General</h2>
-
-  <label class="field">
-    <span>Your name</span>
-    <input type="text" bind:value={prefs.userName} oninput={scheduleSave} placeholder="there" />
-  </label>
-  <p class="hint">Used wherever reminders say "{"{name}"}" — e.g. "Hey, {prefs.userName}".</p>
-
-  <label class="row">
-    <input type="checkbox" bind:checked={prefs.launchAtLogin} onchange={scheduleSave} />
-    <span>Launch at login</span>
-  </label>
-
-  <label class="row">
-    <input type="checkbox" bind:checked={prefs.startPaused} onchange={scheduleSave} />
-    <span>Start paused</span>
-  </label>
-
-  <label class="row">
-    <input type="checkbox" bind:checked={prefs.dnd} onchange={scheduleSave} />
-    <span>Do Not Disturb</span>
-  </label>
-
-  <label class="row">
-    <input type="checkbox" bind:checked={prefs.reducedMotion} onchange={scheduleSave} />
-    <span>Reduced motion (crossfade instead of walking)</span>
-  </label>
-
-  <label class="row">
-    <input type="checkbox" bind:checked={prefs.soundEnabled} onchange={scheduleSave} />
-    <span>Sound effects</span>
-  </label>
-
-  {#if prefs.soundEnabled}
+  <section class="section card pad">
+    <h2 class="section-title">About you</h2>
     <label class="field">
-      <span>Volume</span>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.05"
-        bind:value={prefs.soundVolume}
-        oninput={scheduleSave}
-      />
+      <span class="field-label">Your name</span>
+      <input type="text" bind:value={prefs.userName} oninput={scheduleSave} placeholder="there" />
     </label>
-  {/if}
+    <p class="hint">Used wherever reminders say "{"{name}"}" — e.g. "Hey, {prefs.userName}".</p>
 
-  <label class="field">
-    <span>Language</span>
-    <select disabled>
-      <option>English</option>
-    </select>
-  </label>
+    <label class="field">
+      <span class="field-label">Language</span>
+      <select disabled>
+        <option>English</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="section card pad">
+    <h2 class="section-title">Startup &amp; behavior</h2>
+    <label class="toggle-row">
+      <span>
+        <span class="toggle-label">Launch at login</span>
+        <span class="toggle-hint">Start Companion automatically when you log in.</span>
+      </span>
+      <input type="checkbox" bind:checked={prefs.launchAtLogin} onchange={scheduleSave} />
+    </label>
+
+    <label class="toggle-row">
+      <span>
+        <span class="toggle-label">Start paused</span>
+        <span class="toggle-hint">Don't show any reminders until you hit Resume.</span>
+      </span>
+      <input type="checkbox" bind:checked={prefs.startPaused} onchange={scheduleSave} />
+    </label>
+
+    <label class="toggle-row">
+      <span>
+        <span class="toggle-label">Do Not Disturb</span>
+        <span class="toggle-hint">Silences all reminders until you turn this off.</span>
+      </span>
+      <input type="checkbox" bind:checked={prefs.dnd} onchange={scheduleSave} />
+    </label>
+  </section>
+
+  <section class="section card pad">
+    <h2 class="section-title">Character feel</h2>
+    <label class="toggle-row">
+      <span>
+        <span class="toggle-label">Reduced motion</span>
+        <span class="toggle-hint">Crossfade in/out instead of walking across the screen.</span>
+      </span>
+      <input type="checkbox" bind:checked={prefs.reducedMotion} onchange={scheduleSave} />
+    </label>
+
+    <label class="toggle-row">
+      <span>
+        <span class="toggle-label">Sound effects</span>
+        <span class="toggle-hint">A soft pop on entry, a cheerful ding on yes.</span>
+      </span>
+      <input type="checkbox" bind:checked={prefs.soundEnabled} onchange={scheduleSave} />
+    </label>
+
+    {#if prefs.soundEnabled}
+      <label class="field volume-field">
+        <span class="field-label">Volume</span>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          bind:value={prefs.soundVolume}
+          oninput={scheduleSave}
+        />
+      </label>
+    {/if}
+  </section>
 {/if}
 
 <style>
-  h2 {
-    margin-top: 0;
+  .section {
+    margin-bottom: var(--space-4);
+  }
+  .section.pad {
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .section-title {
+    margin: 0 0 var(--space-4) 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
   }
 
   .field {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
     max-width: 360px;
   }
-
-  .field span {
-    font-size: 0.85rem;
-    font-weight: 600;
+  .field:last-child {
+    margin-bottom: 0;
   }
 
   .field input[type="text"],
   .field select {
-    padding: 0.4rem 0.6rem;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    font-size: 0.9rem;
+    width: 100%;
   }
 
   .hint {
-    font-size: 0.8rem;
-    opacity: 0.6;
-    margin-top: -0.6rem;
-    margin-bottom: 1rem;
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    margin: calc(var(--space-2) * -1) 0 var(--space-3) 0;
   }
 
-  .row {
+  .toggle-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--border);
+  }
+  .toggle-row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+  .toggle-row:last-of-type {
+    padding-bottom: 0;
+  }
+
+  .toggle-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .toggle-hint {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+
+  .volume-field {
+    margin-top: var(--space-1);
+    max-width: 280px;
   }
 </style>

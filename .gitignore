@@ -20,3 +20,6 @@ __pycache__/
 # Build output
 /dist
 .claude/
+/tools/make-pack/clips-scratch
+/packs/dancing-dog
+/packs/dancing-dog.zip

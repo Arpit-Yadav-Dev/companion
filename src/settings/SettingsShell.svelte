@@ -1,4 +1,5 @@
 <script lang="ts">
+  import "./theme.css";
   import GeneralTab from "./GeneralTab.svelte";
   import RemindersTab from "./RemindersTab.svelte";
   import CharacterTab from "./CharacterTab.svelte";
@@ -7,12 +8,12 @@
 
   type TabId = "general" | "reminders" | "character" | "stats" | "about";
 
-  const TABS: { id: TabId; label: string }[] = [
-    { id: "general", label: "General" },
-    { id: "reminders", label: "Reminders" },
-    { id: "character", label: "Character" },
-    { id: "stats", label: "Stats" },
-    { id: "about", label: "About" },
+  const TABS: { id: TabId; label: string; icon: string }[] = [
+    { id: "general", label: "General", icon: "⚙️" },
+    { id: "reminders", label: "Reminders", icon: "💧" },
+    { id: "character", label: "Character", icon: "🎭" },
+    { id: "stats", label: "Stats", icon: "📊" },
+    { id: "about", label: "About", icon: "ℹ️" },
   ];
 
   let active = $state<TabId>("general");
@@ -20,8 +21,13 @@
 
 <div class="shell">
   <nav class="tabs">
+    <div class="brand">
+      <span class="brand-mark">💧</span>
+      <span class="brand-name">Companion</span>
+    </div>
     {#each TABS as tab (tab.id)}
       <button class="tab" class:active={active === tab.id} onclick={() => (active = tab.id)}>
+        <span class="tab-icon">{tab.icon}</span>
         {tab.label}
       </button>
     {/each}
@@ -43,28 +49,6 @@
 </div>
 
 <style>
-  :global(html, body) {
-    margin: 0;
-    height: 100%;
-    font-family:
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
-  }
-
-  :global(body) {
-    background: #f5f5f7;
-    color: #1d1d1f;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(body) {
-      background: #1e1e1e;
-      color: #f0f0f0;
-    }
-  }
-
   .shell {
     display: flex;
     height: 100vh;
@@ -72,51 +56,73 @@
   }
 
   .tabs {
-    width: 160px;
+    width: 190px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 1rem 0.5rem;
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    padding: var(--space-3);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
   }
 
-  @media (prefers-color-scheme: dark) {
-    .tabs {
-      border-right-color: rgba(255, 255, 255, 0.12);
-    }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+
+  .brand-mark {
+    font-size: 1.3rem;
+  }
+
+  .brand-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
   }
 
   .tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     text-align: left;
     background: none;
     border: none;
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: inherit;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    color: var(--text-muted);
     cursor: pointer;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .tab-icon {
+    font-size: 0.95rem;
+    line-height: 1;
   }
 
   .tab:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--surface-hover);
+    color: var(--text);
   }
 
   .tab.active {
-    background: #3478f6;
-    color: white;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .tab:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
+    background: var(--accent);
+    color: var(--accent-contrast);
   }
 
   .panel {
     flex: 1;
+    min-width: 0;
     overflow-y: auto;
-    padding: 1.5rem 2rem;
+    padding: var(--space-6) var(--space-6) var(--space-5);
   }
 </style>

@@ -26,72 +26,107 @@
   }
 </script>
 
-<h2>About</h2>
+<h1 class="panel-title">About</h1>
+<p class="panel-subtitle">Version info, where your data lives, and how to start fresh.</p>
 
-<p class="version">Companion v{version}</p>
+<section class="card pad identity-card">
+  <span class="mark">💧</span>
+  <div>
+    <span class="app-name">Companion</span>
+    <span class="version">Version {version}</span>
+  </div>
+</section>
 
-<button class="action" onclick={openDataFolder}>Open data folder</button>
+<section class="section card pad">
+  <h2 class="section-title">Your data</h2>
+  <p class="row-hint">
+    Everything is stored locally as JSON — no accounts, no network calls.
+  </p>
+  <button class="btn" onclick={openDataFolder}>Open data folder</button>
+</section>
 
-<div class="danger-zone">
-  <button class="action danger" onclick={resetAll}>
-    {confirmingReset ? "Click again to confirm reset" : "Reset all data"}
-  </button>
-  {#if confirmingReset}
-    <button class="link" onclick={() => (confirmingReset = false)}>Cancel</button>
-  {/if}
-  <p class="hint">Clears all reminders, preferences, and stats back to defaults.</p>
-</div>
+<section class="section card pad danger-zone">
+  <h2 class="section-title danger-title">Danger zone</h2>
+  <p class="row-hint">Clears all reminders, preferences, and stats back to their defaults.</p>
+  <div class="danger-actions">
+    <button class="btn btn-danger" onclick={resetAll}>
+      {confirmingReset ? "Click again to confirm" : "Reset all data"}
+    </button>
+    {#if confirmingReset}
+      <button class="link" onclick={() => (confirmingReset = false)}>Cancel</button>
+    {/if}
+  </div>
+</section>
 
 <style>
-  h2 {
-    margin-top: 0;
+  .identity-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .mark {
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+
+  .app-name {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
   }
 
   .version {
-    font-size: 0.9rem;
-    opacity: 0.7;
-  }
-
-  .action {
     display: block;
-    margin-bottom: 0.75rem;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    background: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-    color: inherit;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
   }
 
-  @media (prefers-color-scheme: dark) {
-    .action {
-      background: #2a2a2a;
-      border-color: rgba(255, 255, 255, 0.15);
-    }
+  .section {
+    margin-bottom: var(--space-4);
+  }
+  .section.pad {
+    padding: var(--space-4) var(--space-5);
   }
 
-  .action.danger {
-    color: #e0432b;
-    border-color: #e0432b;
+  .section-title {
+    margin: 0 0 var(--space-2) 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .danger-title {
+    color: var(--danger);
+  }
+
+  .row-hint {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 0 0 var(--space-3) 0;
   }
 
   .danger-zone {
-    margin-top: 2rem;
+    border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  }
+
+  .danger-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
   }
 
   .link {
     background: none;
     border: none;
-    color: #3478f6;
+    color: var(--accent);
     font-size: 0.82rem;
+    font-weight: 600;
     cursor: pointer;
-    margin-left: 0.5rem;
-  }
-
-  .hint {
-    font-size: 0.8rem;
-    opacity: 0.6;
-    margin-top: 0.5rem;
   }
 </style>

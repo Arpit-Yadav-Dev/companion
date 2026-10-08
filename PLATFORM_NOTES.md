@@ -270,6 +270,67 @@ here touches the OS. Not yet tested on a Windows machine.
   Gatekeeper (documented in the project README). Not yet attempted on
   Windows — that's Phase 9, gated on being asked to start it.
 
+## Post-Phase-8: more characters, visual polish, frames renderer wiring
+
+- **Four new built-in SVG characters** (Biscuit the dog, Sprout the potted
+  plant, Sunny the sun, Marshmallow the floaty ghost): same pattern as
+  Sip/Pixel, pure CSS/SVG/cursor-broadcast eye-tracking, no platform-
+  specific code.
+
+- **Settings UI visual polish**: a shared `theme.css` token system (colour
+  tokens, spacing scale, card/button primitives) applied across all 5
+  tabs, plus a redesigned Character tab gallery using CSS grid
+  (`repeat(auto-fill, minmax(...))`) instead of a flex row, which is what
+  was actually overflowing once there were 6+ characters to show. Pure
+  frontend, no platform-specific code.
+
+- **Frames renderer finally wired up** (it existed since Phase 6 as
+  `SpritePlayer.ts` but was never connected to anything): added
+  `FramesCharacter.svelte` as the Svelte wrapper, and enabled Tauri's
+  `asset://` protocol to let the frontend fetch WebP frame files from
+  disk:
+  - `Cargo.toml`: added the `protocol-asset` feature to the `tauri` dep.
+  - `tauri.conf.json`: `app.security.assetProtocol.enable: true` with an
+    empty static `scope` — the real scope is built at runtime instead
+    (see next point), since pack directories live in paths only knowable
+    at runtime (bundled resource dir in a packaged build, differs between
+    dev/.app; the user's per-OS app-data dir for imported packs).
+  - `packs.rs::list_packs`: calls `app.asset_protocol_scope().allow_directory(...)`
+    for both the bundled and user packs dirs every time packs are listed
+    (idempotent, cheap) — this is the piece that makes the asset
+    protocol actually able to serve frame images from wherever packs
+    happen to live on this particular install.
+  - Cross-platform in principle (`asset://` works the same way on
+    Windows), but genuinely untested there — Phase 9 should verify the
+    asset-protocol scope setup and the `convertFileSrc()` URL format both
+    behave the same way on Windows' webview.
+
+- **Tested against a real (non-AI-generated) video clip** for the first
+  time: a stock "dancing dog" clip on a solid blue background (not green)
+  proved `make_pack.py`'s chroma-key step needed to support an arbitrary
+  key colour, not just green — added `--colorkey-hex` and `--despill`
+  {green,blue} flags. Found and left as a known issue (not yet fixed):
+  despill doesn't fully neutralize a blue-screen colour cast on
+  very light-coloured subjects (faint blue tint remained on the dog's
+  light fur near edges) — worth a better despill pass or a stronger
+  `colorkey` similarity/blend tuning if a real light-coloured character
+  pack ever needs a blue (rather than green) background.
+
+- **Known rough edges in the first frames-renderer integration, to fix
+  before this is "real"**: the user reported the character renders
+  partially cut off / mispositioned, and the YES/Later buttons become
+  unclickable when a frames-pack character is active. Suspect causes to
+  investigate: `FramesCharacter`'s canvas sizing (`displayWidth`/
+  `displayHeight` placeholder-aspect guess before the first real frame
+  loads) likely doesn't match the actual cropped-frame aspect ratio from
+  `make_pack.py`, and/or hit-region reporting in `Stage.svelte` reads
+  `characterEl`'s bounding box before the canvas has resized to its real
+  content, leaving stale (and probably wrong) click-through hit rects.
+  Not yet debugged — picking this up again means tracing actual rect
+  values the same way the Phase 2 and Phase 8 bugs were traced (eprintln
+  tracing through a temporary `debug_*` command, removed again once
+  fixed).
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show

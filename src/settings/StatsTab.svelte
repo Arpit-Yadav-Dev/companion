@@ -20,9 +20,9 @@
     }, 300);
   }
 
-  const CHART_HEIGHT = 100;
-  const CHART_BAR_WIDTH = 28;
-  const CHART_GAP = 14;
+  const CHART_HEIGHT = 90;
+  const CHART_BAR_WIDTH = 30;
+  const CHART_GAP = 16;
 
   function dayLabel(dateStr: string): string {
     const d = new Date(dateStr + "T00:00:00");
@@ -30,147 +30,188 @@
   }
 </script>
 
-<h2>Stats</h2>
+<h1 class="panel-title">Stats</h1>
+<p class="panel-subtitle">Today's progress, this week's trend, and your streak.</p>
 
 {#if snapshot}
-  <div class="today-row">
-    <div class="stat-tile">
-      <span class="stat-value">{snapshot.today.glasses} / {snapshot.today.goal}</span>
-      <span class="stat-label">Glasses today</span>
+  <section class="hero-row">
+    <div class="card hero-tile">
+      <span class="hero-value">{snapshot.today.glasses}<span class="hero-of">/{snapshot.today.goal}</span></span>
+      <span class="hero-label">Glasses today</span>
     </div>
-    <label class="field goal-field">
-      <span>Daily goal</span>
-      <input
-        type="number"
-        min="1"
-        bind:value={goalInput}
-        oninput={scheduleSaveGoal}
-      />
-    </label>
-  </div>
-
-  <h3>Last 7 days</h3>
-  <svg
-    class="chart"
-    viewBox="0 0 {snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)} {CHART_HEIGHT + 24}"
-    width={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)}
-    height={CHART_HEIGHT + 24}
-  >
-    {#each snapshot.lastSevenDays as day, i (day.date)}
-      {@const goal = day.goal || 1}
-      {@const ratio = Math.min(1, day.glasses / goal)}
-      {@const barHeight = Math.max(2, ratio * CHART_HEIGHT)}
-      {@const x = i * (CHART_BAR_WIDTH + CHART_GAP)}
-      <rect
-        x={x}
-        y={CHART_HEIGHT - barHeight}
-        width={CHART_BAR_WIDTH}
-        height={barHeight}
-        rx="4"
-        fill={ratio >= 1 ? "#3478f6" : "#b9d4ff"}
-      />
-      <text x={x + CHART_BAR_WIDTH / 2} y={CHART_HEIGHT + 16} text-anchor="middle" class="axis-label">
-        {dayLabel(day.date)}
-      </text>
-    {/each}
-  </svg>
-
-  <div class="streak-row">
-    <div class="stat-tile">
-      <span class="stat-value">{snapshot.currentStreak}</span>
-      <span class="stat-label">Current streak</span>
+    <div class="card hero-tile">
+      <span class="hero-value">{snapshot.currentStreak}<span class="hero-unit">d</span></span>
+      <span class="hero-label">Current streak</span>
     </div>
-    <div class="stat-tile">
-      <span class="stat-value">{snapshot.bestStreak}</span>
-      <span class="stat-label">Best streak</span>
+    <div class="card hero-tile">
+      <span class="hero-value">{snapshot.bestStreak}<span class="hero-unit">d</span></span>
+      <span class="hero-label">Best streak</span>
     </div>
-  </div>
+  </section>
 
-  <h3>Today's responses</h3>
-  <div class="response-row">
-    <span class="response yes">✓ {snapshot.today.yesCount} yes</span>
-    <span class="response later">⏱ {snapshot.today.laterCount} later</span>
-    <span class="response missed">— {snapshot.today.missedCount} missed</span>
-  </div>
+  <section class="section card pad">
+    <div class="section-header">
+      <h2 class="section-title">Last 7 days</h2>
+      <label class="goal-field">
+        <span class="field-label">Daily goal</span>
+        <input type="number" min="1" bind:value={goalInput} oninput={scheduleSaveGoal} />
+      </label>
+    </div>
+
+    <svg
+      class="chart"
+      viewBox="0 0 {snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)} {CHART_HEIGHT + 22}"
+      width={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)}
+      height={CHART_HEIGHT + 22}
+    >
+      {#each snapshot.lastSevenDays as day, i (day.date)}
+        {@const goal = day.goal || 1}
+        {@const ratio = Math.min(1, day.glasses / goal)}
+        {@const barHeight = Math.max(3, ratio * CHART_HEIGHT)}
+        {@const x = i * (CHART_BAR_WIDTH + CHART_GAP)}
+        <rect
+          x={x}
+          y={CHART_HEIGHT - barHeight}
+          width={CHART_BAR_WIDTH}
+          height={barHeight}
+          rx="6"
+          class="bar"
+          class:bar-complete={ratio >= 1}
+        />
+        <text
+          x={x + CHART_BAR_WIDTH / 2}
+          y={CHART_HEIGHT + 16}
+          text-anchor="middle"
+          class="axis-label"
+        >
+          {dayLabel(day.date)}
+        </text>
+      {/each}
+    </svg>
+  </section>
+
+  <section class="section card pad">
+    <h2 class="section-title">Today's responses</h2>
+    <div class="response-row">
+      <span class="response-pill yes">✓ {snapshot.today.yesCount} yes</span>
+      <span class="response-pill later">⏱ {snapshot.today.laterCount} later</span>
+      <span class="response-pill missed">— {snapshot.today.missedCount} missed</span>
+    </div>
+  </section>
 {/if}
 
 <style>
-  h2 {
-    margin-top: 0;
-  }
-  h3 {
-    font-size: 0.9rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.5rem;
+  .hero-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
   }
 
-  .today-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 2rem;
-  }
-
-  .stat-tile {
+  .hero-tile {
     display: flex;
     flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-4) var(--space-4);
   }
 
-  .stat-value {
-    font-size: 1.6rem;
-    font-weight: 700;
+  .hero-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 750;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
   }
 
-  .stat-label {
+  .hero-of,
+  .hero-unit {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-faint);
+  }
+
+  .hero-label {
     font-size: 0.78rem;
-    opacity: 0.65;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .section {
+    margin-bottom: var(--space-4);
+  }
+  .section.pad {
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+
+  .section-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
   }
 
   .goal-field {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-  }
-  .goal-field span {
-    font-size: 0.78rem;
-    font-weight: 600;
-    opacity: 0.75;
+    gap: var(--space-1);
   }
   .goal-field input {
     width: 70px;
-    padding: 0.3rem 0.5rem;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    text-align: center;
   }
 
   .chart {
     display: block;
+    overflow: visible;
+  }
+
+  .bar {
+    fill: var(--accent-soft);
+  }
+  .bar-complete {
+    fill: var(--accent);
   }
 
   .axis-label {
-    font-size: 9px;
-    fill: currentColor;
-    opacity: 0.6;
-  }
-
-  .streak-row {
-    display: flex;
-    gap: 2rem;
-    margin-top: 1rem;
+    font-size: 10px;
+    font-weight: 600;
+    fill: var(--text-faint);
   }
 
   .response-row {
     display: flex;
-    gap: 1.25rem;
-    font-size: 0.85rem;
+    gap: var(--space-3);
+    flex-wrap: wrap;
   }
 
-  .response.yes {
-    color: #2a9d5c;
+  .response-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 650;
   }
-  .response.later {
-    color: #c98a1a;
+
+  .response-pill.yes {
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 14%, transparent);
   }
-  .response.missed {
-    opacity: 0.6;
+  .response-pill.later {
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 14%, transparent);
+  }
+  .response-pill.missed {
+    color: var(--text-muted);
+    background: var(--surface-hover);
   }
 </style>

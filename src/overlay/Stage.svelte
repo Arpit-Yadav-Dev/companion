@@ -6,9 +6,14 @@
   import { Director, type SceneState, type EntranceSide } from "./director";
   import SvgCharacter from "./SvgCharacter.svelte";
   import PixelCharacter from "./PixelCharacter.svelte";
+  import BiscuitCharacter from "./BiscuitCharacter.svelte";
+  import SproutCharacter from "./SproutCharacter.svelte";
+  import SunnyCharacter from "./SunnyCharacter.svelte";
+  import MarshmallowCharacter from "./MarshmallowCharacter.svelte";
+  import FramesCharacter from "./FramesCharacter.svelte";
   import Bubble from "./Bubble.svelte";
   import Confetti from "./Confetti.svelte";
-  import type { CharacterPrefs, GeneralPrefs } from "../shared/types";
+  import type { CharacterPrefs, GeneralPrefs, PackInfo } from "../shared/types";
 
   let sceneState = $state<SceneState>("hidden");
   let line = $state("");
@@ -23,6 +28,7 @@
 
   let characterPrefs = $state<CharacterPrefs | null>(null);
   let generalPrefs = $state<GeneralPrefs | null>(null);
+  let activeFramesPack = $state<PackInfo | null>(null);
 
   const director = new Director({
     onStateChange: (s) => (sceneState = s),
@@ -91,10 +97,16 @@
         // hidden almost all the time) so Settings edits take effect
         // without needing a dedicated live-reload event or an overlay
         // restart.
-        [characterPrefs, generalPrefs] = await Promise.all([
+        let packs: PackInfo[];
+        [characterPrefs, generalPrefs, packs] = await Promise.all([
           invoke<CharacterPrefs>("get_character_prefs"),
           invoke<GeneralPrefs>("get_general_prefs"),
+          invoke<PackInfo[]>("list_packs"),
         ]);
+        activeFramesPack =
+          packs.find(
+            (p) => p.manifest.id === characterPrefs?.activePackId && p.manifest.renderer === "frames",
+          ) ?? null;
 
         const prefersReducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         director.setReducedMotion(generalPrefs.reducedMotion || prefersReducedMotionMedia);
@@ -165,8 +177,40 @@
         {#if showConfetti}
           <Confetti />
         {/if}
-        {#if characterPrefs?.activePackId === "pixel"}
+        {#if activeFramesPack}
+          <FramesCharacter
+            {sceneState}
+            manifest={activeFramesPack.manifest}
+            packDir={activeFramesPack.dir}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "pixel"}
           <PixelCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "biscuit"}
+          <BiscuitCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "sprout"}
+          <SproutCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "sunny"}
+          <SunnyCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "marshmallow"}
+          <MarshmallowCharacter
             {sceneState}
             mirrored={entranceSide === "right"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}

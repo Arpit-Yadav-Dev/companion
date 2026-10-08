@@ -68,7 +68,9 @@ def run_ffmpeg(args: list[str]) -> None:
         raise RuntimeError(f"ffmpeg failed: {result.stderr.strip()}")
 
 
-def extract_frames(clip_path: Path, out_dir: Path, fps: int, bg_mode: str) -> list[Path]:
+def extract_frames(
+    clip_path: Path, out_dir: Path, fps: int, bg_mode: str, colorkey_hex: str, despill_type: str
+) -> list[Path]:
     """Extracts frames at the target fps, applying chroma-key removal
     during extraction when bg_mode is "auto" or "colorkey". Frames land as
     sequential zero-padded PNGs (lossless, since later steps still need to
@@ -78,12 +80,11 @@ def extract_frames(clip_path: Path, out_dir: Path, fps: int, bg_mode: str) -> li
 
     vf_parts = [f"fps={fps}"]
     if bg_mode in ("auto", "colorkey"):
-        # 0x00FF00 (green) with a generous similarity/blend so slightly
-        # uneven studio lighting on the green screen still keys out
-        # cleanly; despill removes the green fringe chroma-key leaves on
-        # hair/edges.
-        vf_parts.append("colorkey=0x00FF00:0.35:0.15")
-        vf_parts.append("despill=type=green")
+        # A generous similarity/blend so slightly uneven studio lighting
+        # on the screen still keys out cleanly; despill removes the
+        # colour fringe chroma-key leaves on hair/edges.
+        vf_parts.append(f"colorkey={colorkey_hex}:0.35:0.15")
+        vf_parts.append(f"despill=type={despill_type}")
     run_ffmpeg([
         "-i", str(clip_path),
         "-vf", ",".join(vf_parts),
@@ -260,9 +261,23 @@ def main() -> int:
         "--bg",
         choices=["auto", "colorkey", "rembg", "none"],
         default="auto",
-        help="auto/colorkey = green-screen chroma key (default); "
-        "rembg = ML background removal for non-green-screen clips; "
+        help="auto/colorkey = solid-colour-screen chroma key (default, "
+        "green unless --colorkey-hex/--despill say otherwise); "
+        "rembg = ML background removal for non-solid-colour clips; "
         "none = clips are already transparent/pre-keyed",
+    )
+    parser.add_argument(
+        "--colorkey-hex",
+        default="0x00FF00",
+        help="Background colour to key out, as 0xRRGGBB (default: green, 0x00FF00). "
+        "Sample a background pixel from your clip to find the right value.",
+    )
+    parser.add_argument(
+        "--despill",
+        choices=["green", "blue"],
+        default="green",
+        help="Which colour fringe to remove from edges after keying (default: green). "
+        "Set to blue when --colorkey-hex is a blue screen.",
     )
     parser.add_argument("--out", default=None, help="Output directory (default: ./packs/<id>)")
     args = parser.parse_args()
@@ -299,7 +314,9 @@ def main() -> int:
         clips_by_name: dict[str, ClipFrames] = {}
         for clip_name, clip_path in clip_paths.items():
             raw_dir = tmp_path / "raw" / clip_name
-            frames = extract_frames(clip_path, raw_dir, args.fps, args.bg)
+            frames = extract_frames(
+                clip_path, raw_dir, args.fps, args.bg, args.colorkey_hex, args.despill
+            )
             if args.bg == "rembg":
                 remove_background_rembg(frames)
             clips_by_name[clip_name] = ClipFrames(state=clip_name, frame_paths=frames)

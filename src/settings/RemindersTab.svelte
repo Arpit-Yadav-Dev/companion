@@ -89,7 +89,8 @@
   }
 </script>
 
-<h2>Reminders</h2>
+<h1 class="panel-title">Reminders</h1>
+<p class="panel-subtitle">Turn reminders on, tune their timing, and customize what they say.</p>
 
 <div class="list">
   {#each reminders as reminder (reminder.id)}
@@ -97,7 +98,7 @@
       <div class="card-header">
         <label class="row">
           <input type="checkbox" bind:checked={reminder.enabled} onchange={scheduleSave} />
-          <span class="emoji">{reminder.emoji}</span>
+          <span class="emoji-badge">{reminder.emoji}</span>
           <span class="title">{reminder.title}</span>
         </label>
         <div class="header-actions">
@@ -117,7 +118,7 @@
       {#if expandedId === reminder.id}
         <div class="card-body">
           <label class="field">
-            <span>Interval (minutes)</span>
+            <span class="field-label">Interval (minutes)</span>
             <input
               type="number"
               min="1"
@@ -128,7 +129,7 @@
 
           <div class="field-row">
             <label class="field">
-              <span>Active from</span>
+              <span class="field-label">Active from</span>
               <input
                 type="time"
                 value={minutesToTimeInput(reminder.activeHours.startMinute)}
@@ -139,7 +140,7 @@
               />
             </label>
             <label class="field">
-              <span>Active until</span>
+              <span class="field-label">Active until</span>
               <input
                 type="time"
                 value={minutesToTimeInput(reminder.activeHours.endMinute)}
@@ -152,7 +153,7 @@
           </div>
 
           <div class="field">
-            <span>Days</span>
+            <span class="field-label">Days</span>
             <div class="days">
               {#each DAY_LABELS as day (day.value)}
                 <button
@@ -167,7 +168,7 @@
           </div>
 
           <div class="field">
-            <span>Lines (one picked at random each time)</span>
+            <span class="field-label">Lines (one picked at random each time)</span>
             {#each reminder.lines as _, i}
               <div class="line-row">
                 <input
@@ -186,17 +187,17 @@
 
           <div class="field-row">
             <label class="field">
-              <span>YES button label</span>
+              <span class="field-label">YES button label</span>
               <input type="text" bind:value={reminder.yesLabel} oninput={scheduleSave} />
             </label>
             <label class="field">
-              <span>Later button label</span>
+              <span class="field-label">Later button label</span>
               <input type="text" bind:value={reminder.laterLabel} oninput={scheduleSave} />
             </label>
           </div>
 
           <label class="field">
-            <span>Snooze minutes</span>
+            <span class="field-label">Snooze minutes</span>
             <input type="number" min="1" bind:value={reminder.snoozeMin} oninput={scheduleSave} />
           </label>
         </div>
@@ -205,161 +206,163 @@
   {/each}
 </div>
 
-<button class="add-custom" onclick={addCustomReminder}>+ Custom reminder</button>
+<button class="btn add-custom" onclick={addCustomReminder}>+ Custom reminder</button>
 
 <style>
-  h2 {
-    margin-top: 0;
-  }
-
   .list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
   }
 
   .card {
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
     overflow: hidden;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .card {
-      border-color: rgba(255, 255, 255, 0.15);
-    }
   }
 
   .card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 0.9rem;
+    padding: var(--space-3) var(--space-4);
   }
 
   .row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-3);
   }
 
-  .emoji {
-    font-size: 1.1rem;
+  .emoji-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    font-size: 1rem;
   }
 
   .title {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 650;
+    font-size: 0.88rem;
+    color: var(--text);
   }
 
   .header-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: var(--space-4);
   }
 
   .link {
     background: none;
     border: none;
-    color: #3478f6;
-    font-size: 0.82rem;
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
     cursor: pointer;
     padding: 0;
   }
 
   .link.danger {
-    color: #e0432b;
+    color: var(--danger);
   }
 
   .card-body {
-    padding: 0.75rem 0.9rem 1rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: var(--space-4);
+    border-top: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .card-body {
-      border-top-color: rgba(255, 255, 255, 0.1);
-    }
+    gap: var(--space-4);
+    background: var(--surface-hover);
   }
 
   .field {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .field span {
-    font-size: 0.78rem;
-    font-weight: 600;
-    opacity: 0.75;
+    gap: var(--space-2);
   }
 
   .field input[type="text"],
   .field input[type="number"],
   .field input[type="time"] {
-    padding: 0.35rem 0.5rem;
-    border-radius: 6px;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    font-size: 0.85rem;
+    width: 100%;
   }
 
   .field-row {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-4);
+    flex-wrap: wrap;
   }
   .field-row .field {
     flex: 1;
+    min-width: 140px;
   }
 
   .days {
     display: flex;
-    gap: 0.3rem;
+    gap: var(--space-2);
   }
 
   .day-pill {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    background: none;
-    font-size: 0.75rem;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    font-size: 0.74rem;
+    font-weight: 600;
     cursor: pointer;
-    color: inherit;
+    color: var(--text-muted);
+    transition:
+      background 0.12s ease,
+      color 0.12s ease,
+      border-color 0.12s ease;
+  }
+  .day-pill:hover {
+    border-color: var(--accent);
   }
 
   .day-pill.active {
-    background: #3478f6;
-    color: white;
-    border-color: #3478f6;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-color: var(--accent);
   }
 
   .line-row {
     display: flex;
-    gap: 0.4rem;
+    gap: var(--space-2);
     align-items: center;
   }
   .line-row input {
     flex: 1;
+    min-width: 0;
   }
 
   .icon-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
-    border: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    color: #e0432b;
-    font-size: 0.8rem;
+    color: var(--danger);
+    font-size: 0.75rem;
+  }
+  .icon-btn:hover {
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
   }
 
   .add-custom {
-    margin-top: 1rem;
-    background: none;
-    border: 1px dashed rgba(0, 0, 0, 0.25);
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: inherit;
+    border-style: dashed;
+    font-weight: 600;
   }
 </style>

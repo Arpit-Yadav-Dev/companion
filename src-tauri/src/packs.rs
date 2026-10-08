@@ -155,6 +155,14 @@ pub fn list_packs<R: Runtime>(app: AppHandle<R>) -> Vec<PackInfo> {
         .into_iter()
         .flatten()
     {
+        // The frames renderer fetches frame images via the asset:// protocol,
+        // which refuses anything outside its allow-listed scope. Packs can
+        // live in the bundled resources dir or the user's app-data dir,
+        // neither of which is known at build time (the user one especially,
+        // since it's per-OS/per-user), so the scope is extended here at
+        // runtime instead of being fully static in tauri.conf.json.
+        let _ = app.asset_protocol_scope().allow_directory(&base, true);
+
         let Ok(entries) = fs::read_dir(&base) else {
             continue;
         };
