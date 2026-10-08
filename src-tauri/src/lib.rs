@@ -1,3 +1,5 @@
+mod commands;
+mod overlay;
 mod tray;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -19,18 +21,25 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .invoke_handler(tauri::generate_handler![
+            commands::set_hit_regions,
+            commands::overlay_ready,
+            commands::reminder_response,
+        ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             // Settings window: a normal decorated window, created hidden and only
             // shown on demand from the tray menu.
-            WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("index.html".into()))
+            WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/".into()))
                 .title("Companion Settings")
                 .inner_size(720.0, 520.0)
                 .resizable(true)
                 .visible(false)
                 .build()?;
+
+            overlay::create(app.handle())?;
 
             tray::setup_tray(app.handle())?;
 

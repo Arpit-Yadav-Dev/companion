@@ -38,6 +38,49 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   overlay). This key is ignored on other platforms but is kept
   unconditional in config since Tauri no-ops it rather than erroring.
 
+## Phase 2: overlay window (transparent, click-through, hit regions)
+
+- **`cursor_position()`** (used in `overlay.rs` both for picking the
+  monitor to show on and in the 33ms hit-region poll) returns global
+  desktop coordinates identically on macOS and Windows per Tauri's docs —
+  no platform branch needed here.
+
+- **Monitor work-area / `monitor_from_point`**: cross-platform Tauri API,
+  but the underlying work-area calculation differs — macOS subtracts the
+  menu bar and Dock, Windows subtracts the taskbar. No code change needed,
+  just something to visually confirm once we have a Windows machine: the
+  bottom-anchored strip should sit just above the taskbar there the same
+  way it sits above the Dock here.
+
+- **`macOSPrivateApi: true`** (set in Phase 1) is what makes
+  `transparent: true` actually produce a transparent NSWindow instead of a
+  black one. On Windows, WebView2's transparency works differently (via
+  `set_background_color` on the Webview2Controller, which Tauri handles
+  internally) — nothing extra needed on our side, but Phase 9 should do a
+  visual check for a white/black flash on first show, since WebView2 has a
+  known history of flashing opaque before its first transparent paint. Our
+  `overlay_ready` → `overlay::show` sequencing (window created `visible:
+  false`, frontend tells Rust to show only after its first real frame is
+  painted) is designed to dodge this on both platforms, but it's only been
+  verified on macOS so far.
+
+- **NSWindow collection behaviour / level** (canJoinAllSpaces,
+  fullScreenAuxiliary, stationary, floating) from the brief's section 2.1
+  is **not yet implemented** — Phase 2 only uses the portable
+  `always_on_top(true)` builder flag, which keeps the overlay above normal
+  windows but does not yet guarantee it floats over full-screen apps or
+  follows the user across Spaces. This objc2/objc2-app-kit layer is
+  deferred to Phase 3 (once the overlay has real content worth seeing
+  across Spaces) and will be isolated in `#[cfg(target_os = "macos")]`
+  inside `overlay.rs`. No Windows equivalent needed — Win32 topmost windows
+  don't have a "Spaces" concept.
+
+- **Hit-region polling thread** (`overlay.rs::start_hit_region_polling`):
+  pure Rust using `WebviewWindow::cursor_position` / `set_ignore_cursor_events`,
+  no OS-specific code. Confirmed working on macOS end-to-end (cargo check
+  clean, app launches, overlay window created hidden with no Dock/taskbar
+  entry). Same code path should work unmodified on Windows.
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show

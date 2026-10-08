@@ -4,6 +4,8 @@ use tauri::{
     AppHandle, Manager, Runtime,
 };
 
+use crate::commands;
+
 /// Builds the static tray menu described in the brief and attaches it to a
 /// template tray icon. Dynamic bits (the "Next at …" countdown, the live
 /// "Active"/"Paused" status) are wired up in Phase 4 once the scheduler
@@ -66,8 +68,7 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
             }
         }
         "test_reminder" => {
-            // Phase 2 will wire this to the overlay's "show a placeholder
-            // reminder" flow. No-op for now.
+            commands::trigger_test_reminder(app);
         }
         "pause_30m" | "pause_1h" | "pause_tomorrow" | "pause_resume" => {
             // Phase 4 (scheduler) will implement pausing.
