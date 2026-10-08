@@ -49,9 +49,12 @@
         line = payload.lines[Math.floor(Math.random() * payload.lines.length)] ?? "";
         visible = true;
 
+        // Show the window first — requestAnimationFrame never fires on a
+        // hidden window in WKWebView, so waiting on it before this point
+        // would hang forever.
+        await invoke("overlay_ready");
         await new Promise((r) => requestAnimationFrame(r));
         reportHitRegions();
-        await invoke("overlay_ready");
 
         if (timeoutHandle) clearTimeout(timeoutHandle);
         timeoutHandle = setTimeout(() => resolve("timeout"), TIMEOUT_MS);

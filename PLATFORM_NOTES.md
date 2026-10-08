@@ -64,6 +64,21 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   painted) is designed to dodge this on both platforms, but it's only been
   verified on macOS so far.
 
+- **Gotcha found during Phase 2 testing (WKWebView-specific, may or may
+  not reproduce on WebView2):** the original overlay code awaited
+  `requestAnimationFrame` *before* calling `invoke("overlay_ready")` (i.e.
+  before telling Rust to actually show the window). On macOS, WKWebView
+  never fires `requestAnimationFrame` callbacks while its window is
+  hidden, so that `await` hung forever and the reminder box never
+  appeared — clicking "Test reminder now" did nothing visible, even
+  though the Rust-side emit and the frontend's event listener were both
+  working correctly. Fixed in `src/routes/overlay/+page.svelte` by
+  calling `overlay_ready` first (which shows the window) and only then
+  awaiting the next animation frame before measuring hit regions. Windows'
+  WebView2 may or may not suspend rAF on hidden windows the same way —
+  worth a deliberate regression check in Phase 9, but the current
+  show-before-rAF ordering is correct regardless of platform.
+
 - **NSWindow collection behaviour / level** (canJoinAllSpaces,
   fullScreenAuxiliary, stationary, floating) from the brief's section 2.1
   is **not yet implemented** — Phase 2 only uses the portable
