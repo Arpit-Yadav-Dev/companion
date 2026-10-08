@@ -5,6 +5,7 @@
   "windows": ["settings", "overlay"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "dialog:default"
   ]
 }

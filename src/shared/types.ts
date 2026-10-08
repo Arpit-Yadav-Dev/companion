@@ -94,3 +94,28 @@ export interface StatsSnapshot {
   currentStreak: number;
   bestStreak: number;
 }
+
+export interface PackStateConfig {
+  dir: string;
+  loop: boolean;
+  move?: "enter" | "exit";
+}
+
+export interface PackManifest {
+  id: string;
+  name: string;
+  renderer: "svg" | "frames";
+  fps: number;
+  heightPx: number;
+  anchor: { x: number; y: number };
+  bubbleOffset: { x: number; y: number };
+  states: Record<string, PackStateConfig>;
+  props: Record<string, string>;
+  mirrorForDirection: boolean;
+  stridePx?: number;
+}
+
+export interface PackInfo {
+  manifest: PackManifest;
+  dir: string;
+}

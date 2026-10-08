@@ -1,10 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import type { CharacterPrefs, ThemeName, EntranceSidePref, PositionPref } from "../shared/types";
+  import type {
+    CharacterPrefs,
+    ThemeName,
+    EntranceSidePref,
+    PositionPref,
+    PackInfo,
+  } from "../shared/types";
   import SvgCharacter from "../overlay/SvgCharacter.svelte";
+  import PixelCharacter from "../overlay/PixelCharacter.svelte";
 
   let prefs = $state<CharacterPrefs | null>(null);
+  let packs = $state<PackInfo[]>([]);
+  let importing = $state(false);
+  let importError = $state("");
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const THEMES: ThemeName[] = ["blue", "peach", "mint", "night"];
@@ -21,6 +31,7 @@
 
   onMount(async () => {
     prefs = await invoke<CharacterPrefs>("get_character_prefs");
+    packs = await invoke<PackInfo[]>("list_packs");
   });
 
   function scheduleSave() {
@@ -30,23 +41,60 @@
       invoke("save_character_prefs", { prefs });
     }, 300);
   }
+
+  function selectPack(id: string) {
+    if (!prefs) return;
+    prefs.activePackId = id;
+    scheduleSave();
+  }
+
+  async function importPack() {
+    importing = true;
+    importError = "";
+    try {
+      const result = await invoke<PackInfo | null>("import_pack");
+      if (result) {
+        packs = await invoke<PackInfo[]>("list_packs");
+        selectPack(result.manifest.id);
+      }
+    } catch (e) {
+      importError = String(e);
+    } finally {
+      importing = false;
+    }
+  }
 </script>
 
 <h2>Character</h2>
 
 {#if prefs}
   <div class="gallery">
-    <div class="pack-card active">
-      <div class="preview" style="--theme-scale: {prefs.sizePercent / 100}">
-        <SvgCharacter sceneState="idle" theme={prefs.theme} scale={prefs.sizePercent / 100} />
-      </div>
-      <span class="pack-name">Sip</span>
-    </div>
-    <div class="pack-card disabled">
-      <div class="preview placeholder">🐱</div>
-      <span class="pack-name">Pixel (Phase 6)</span>
-    </div>
+    {#each packs as pack (pack.manifest.id)}
+      <button
+        class="pack-card"
+        class:active={prefs.activePackId === pack.manifest.id}
+        onclick={() => selectPack(pack.manifest.id)}
+      >
+        <div class="preview">
+          {#if pack.manifest.renderer === "svg" && pack.manifest.id === "pixel"}
+            <PixelCharacter sceneState="idle" scale={prefs.sizePercent / 100} />
+          {:else if pack.manifest.renderer === "svg"}
+            <SvgCharacter sceneState="idle" theme={prefs.theme} scale={prefs.sizePercent / 100} />
+          {:else}
+            <div class="preview placeholder">🖼️</div>
+          {/if}
+        </div>
+        <span class="pack-name">{pack.manifest.name}</span>
+      </button>
+    {/each}
   </div>
+
+  <button class="import-btn" onclick={importPack} disabled={importing}>
+    {importing ? "Importing…" : "Import pack (.zip)"}
+  </button>
+  {#if importError}
+    <p class="error">{importError}</p>
+  {/if}
 
   <label class="field">
     <span>Theme</span>
@@ -95,7 +143,6 @@
     </select>
   </label>
 
-  <p class="hint">Import pack (.zip) arrives in Phase 6 once the frames renderer exists.</p>
 {/if}
 
 <style>
@@ -118,15 +165,19 @@
     padding: 0.75rem;
     border-radius: 10px;
     border: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+  }
+
+  .pack-card:hover {
+    background: rgba(0, 0, 0, 0.04);
   }
 
   .pack-card.active {
     border-color: #3478f6;
     background: rgba(52, 120, 246, 0.08);
-  }
-
-  .pack-card.disabled {
-    opacity: 0.4;
   }
 
   .preview {
@@ -206,5 +257,27 @@
   .hint {
     font-size: 0.8rem;
     opacity: 0.6;
+  }
+
+  .import-btn {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px dashed rgba(0, 0, 0, 0.25);
+    background: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: inherit;
+  }
+
+  .import-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .error {
+    color: #e0432b;
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
   }
 </style>

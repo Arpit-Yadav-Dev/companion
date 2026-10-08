@@ -46,12 +46,13 @@ export class Director {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
 
-  async playScene(payload: ReminderShowPayload) {
+  async playScene(payload: ReminderShowPayload, entrancePref: "left" | "right" | "random" = "random") {
     this.resolved = false;
     this.reminderId = payload.reminderId;
     this.snoozeMin = payload.snoozeMin;
 
-    const side: EntranceSide = Math.random() < 0.5 ? "left" : "right";
+    const side: EntranceSide =
+      entrancePref === "random" ? (Math.random() < 0.5 ? "left" : "right") : entrancePref;
     this.callbacks.onEntranceSideChange(side);
 
     this.callbacks.onButtonsVisibleChange(false);

@@ -165,6 +165,37 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   check on Windows that the tray menu item text updates the same way (no
   known reason it wouldn't).
 
+## Phase 6: frames renderer + pack system + import
+
+- **Bundled `packs/` resolution** (`packs.rs::builtin_packs_dir`): resources
+  declared in `tauri.conf.json`'s `bundle.resources` (using the `{"from/":
+  "to/"}` map form, not a bare string — a bare `"../packs"` gets its `..`
+  rewritten to a literal `_up_` path segment by Tauri, landing the folder
+  at the wrong place) are copied into `target/<profile>/` on every build,
+  including `tauri dev`'s. This made `resource_dir()` resolve correctly
+  in dev without needing a project-relative fallback, which surprised me
+  enough to verify against the installed `tauri-build`/`tauri-utils`
+  source rather than assume — worth remembering if a future Tauri
+  version changes this. A `CARGO_MANIFEST_DIR`-relative fallback is kept
+  anyway for the narrow gap before the first resource copy has happened.
+  Cross-platform — no code changes expected for Windows, but worth a
+  sanity check once there's a Windows build, since resource-dir
+  resolution differs structurally there (no `.app/Contents/Resources`).
+
+- **Pack import** (`packs.rs::import_pack`): uses `tauri-plugin-dialog`'s
+  native file picker and the `zip` crate's `ZipArchive::extract`, both
+  cross-platform. No OS-specific code. The native file-picker UI will
+  obviously look like Windows' own picker there rather than macOS's, but
+  that's just the platform being itself, not something we control or
+  need to branch on.
+
+- **`SpritePlayer.ts`** (frame-sequence canvas player for `frames`-
+  renderer packs): pure web APIs (`createImageBitmap`, `requestAnimationFrame`,
+  `fetch`), nothing macOS-specific. Not yet exercised end-to-end since no
+  real `frames` pack exists until Phase 7's make-pack tool produces one —
+  worth a dedicated test pass once that content exists, on both
+  platforms.
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show

@@ -1,6 +1,7 @@
 mod commands;
 mod idle;
 mod overlay;
+mod packs;
 mod reminders;
 mod scheduler;
 mod settings;
@@ -26,6 +27,7 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::set_hit_regions,
             commands::overlay_ready,
@@ -47,6 +49,8 @@ pub fn run() {
             settings::open_data_folder,
             settings::reset_all_data,
             settings::app_version,
+            packs::list_packs,
+            packs::import_pack,
         ])
         .manage(scheduler::SchedulerState::default())
         .setup(|app| {

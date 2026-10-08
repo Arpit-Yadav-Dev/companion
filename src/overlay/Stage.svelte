@@ -5,7 +5,9 @@
   import type { HitRect, ReminderShowPayload } from "../shared/types";
   import { Director, type SceneState, type EntranceSide } from "./director";
   import SvgCharacter from "./SvgCharacter.svelte";
+  import PixelCharacter from "./PixelCharacter.svelte";
   import Bubble from "./Bubble.svelte";
+  import type { CharacterPrefs } from "../shared/types";
 
   let sceneState = $state<SceneState>("hidden");
   let line = $state("");
@@ -16,6 +18,8 @@
 
   let characterEl: HTMLDivElement | undefined = $state();
   let bubbleEl: HTMLDivElement | undefined = $state();
+
+  let characterPrefs = $state<CharacterPrefs | null>(null);
 
   const director = new Director({
     onStateChange: (s) => (sceneState = s),
@@ -61,13 +65,19 @@
     const unlistenPromise = webview.listen<ReminderShowPayload>(
       "reminder://show",
       async (event) => {
+        // Re-fetch character prefs on every appearance (cheap, and the
+        // overlay is hidden almost all the time) so Character tab edits
+        // in Settings take effect without needing a dedicated live-reload
+        // event or an overlay restart.
+        characterPrefs = await invoke<CharacterPrefs>("get_character_prefs");
+
         // Show the window first — requestAnimationFrame never fires on a
         // hidden window in WKWebView, so anything waiting on a frame
         // before this point would hang forever.
         await invoke("overlay_ready");
         yesLabel = event.payload.yesLabel;
         laterLabel = event.payload.laterLabel;
-        director.playScene(event.payload);
+        director.playScene(event.payload, characterPrefs.entranceSide);
       },
     );
 
@@ -98,7 +108,7 @@
 
 <div class="stage">
   {#if sceneState !== "hidden"}
-    <div class="scene side-{entranceSide}">
+    <div class="scene side-{entranceSide} pos-{(characterPrefs?.position ?? 'bottom_left').replace('_', '-')}">
       <div class="bubble-wrap" bind:this={bubbleEl}>
         {#if line}
           <Bubble
@@ -112,7 +122,20 @@
         {/if}
       </div>
       <div class="character-wrap state-{sceneState}" bind:this={characterEl}>
-        <SvgCharacter {sceneState} mirrored={entranceSide === "right"} />
+        {#if characterPrefs?.activePackId === "pixel"}
+          <PixelCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else}
+          <SvgCharacter
+            {sceneState}
+            mirrored={entranceSide === "right"}
+            theme={characterPrefs?.theme ?? "blue"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {/if}
       </div>
     </div>
   {/if}
@@ -141,11 +164,15 @@
     gap: 0.5rem;
   }
 
-  .scene.side-left {
+  .scene.pos-bottom-left {
     left: 4rem;
   }
-  .scene.side-right {
+  .scene.pos-bottom-right {
     right: 4rem;
+  }
+  .scene.pos-bottom-center {
+    left: 50%;
+    translate: -50% 0;
   }
 
   .bubble-wrap,
