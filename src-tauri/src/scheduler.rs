@@ -376,6 +376,42 @@ pub fn set_dnd<R: Runtime>(app: &AppHandle<R>, enabled: bool) {
     inner.dnd = enabled;
 }
 
+pub fn set_user_name<R: Runtime>(app: &AppHandle<R>, name: String) {
+    let state = app.state::<SchedulerState>();
+    let mut inner = state.inner.lock().unwrap();
+    inner.user_name = name;
+}
+
+pub fn set_daily_goal<R: Runtime>(app: &AppHandle<R>, goal: u32) {
+    let state = app.state::<SchedulerState>();
+    let mut inner = state.inner.lock().unwrap();
+    inner.daily_goal = goal;
+}
+
+/// Re-reads the reminders list from the store (after the Settings window
+/// saves changes, or after a reset-all) and re-seeds next-due times for
+/// any reminder that doesn't already have one, so edits take effect live
+/// without needing a restart. Existing next-due times for reminders that
+/// already existed are left alone, so editing a reminder's lines or
+/// labels doesn't reset its countdown.
+pub fn reload_reminders<R: Runtime>(app: &AppHandle<R>) {
+    let (reminders, _user_name, _daily_goal) = load_settings(app);
+    let state = app.state::<SchedulerState>();
+    let mut inner = state.inner.lock().unwrap();
+    let now = Local::now();
+
+    inner
+        .runtime
+        .retain(|id, _| reminders.iter().any(|r| &r.id == id));
+    for r in &reminders {
+        inner.runtime.entry(r.id.clone()).or_insert_with(|| ReminderRuntime {
+            next_due: now + chrono::Duration::minutes(r.interval_min as i64),
+            last_line_index: None,
+        });
+    }
+    inner.reminders = reminders;
+}
+
 /// Fires the given reminder (or the water reminder if `reminder_id` is
 /// `None`) immediately, bypassing active hours/pause/DND — used by the
 /// tray's "Test reminder now" and the Settings "Test" button per reminder.

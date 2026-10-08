@@ -65,3 +65,32 @@ export interface DailyStats {
   laterCount: number;
   missedCount: number;
 }
+
+export interface GeneralPrefs {
+  userName: string;
+  launchAtLogin: boolean;
+  startPaused: boolean;
+  dnd: boolean;
+  reducedMotion: boolean;
+  soundEnabled: boolean;
+  soundVolume: number;
+}
+
+export type EntranceSidePref = "left" | "right" | "random";
+export type PositionPref = "bottom_left" | "bottom_right" | "bottom_center";
+export type ThemeName = "blue" | "peach" | "mint" | "night";
+
+export interface CharacterPrefs {
+  activePackId: string;
+  theme: ThemeName;
+  sizePercent: number;
+  entranceSide: EntranceSidePref;
+  position: PositionPref;
+}
+
+export interface StatsSnapshot {
+  today: DailyStats;
+  lastSevenDays: DailyStats[];
+  currentStreak: number;
+  bestStreak: number;
+}

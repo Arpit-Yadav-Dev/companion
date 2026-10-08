@@ -3,6 +3,7 @@ mod idle;
 mod overlay;
 mod reminders;
 mod scheduler;
+mod settings;
 mod stats;
 mod tray;
 
@@ -34,6 +35,18 @@ pub fn run() {
             commands::resume_reminders,
             commands::set_dnd,
             commands::scheduler_status,
+            settings::get_reminders,
+            settings::save_reminders,
+            settings::get_general_prefs,
+            settings::save_general_prefs,
+            settings::get_character_prefs,
+            settings::save_character_prefs,
+            settings::get_daily_goal,
+            settings::save_daily_goal,
+            settings::get_stats_snapshot,
+            settings::open_data_folder,
+            settings::reset_all_data,
+            settings::app_version,
         ])
         .manage(scheduler::SchedulerState::default())
         .setup(|app| {
