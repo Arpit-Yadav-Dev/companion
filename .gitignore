@@ -14,6 +14,8 @@ vite.config.ts.timestamp-*
 
 # Tools (Python venv for pack maker)
 /tools/.venv
+__pycache__/
+*.pyc
 
 # Build output
 /dist

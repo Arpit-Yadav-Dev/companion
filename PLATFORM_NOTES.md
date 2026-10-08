@@ -196,6 +196,20 @@ port (Phase 9) will need to do instead. Updated as each phase lands.
   worth a dedicated test pass once that content exists, on both
   platforms.
 
+## Phase 7: make-pack tool
+
+Pure Python + ffmpeg (via `imageio-ffmpeg`'s bundled binary, never
+system/Homebrew ffmpeg per the Phase 0 rules) + Pillow/numpy — nothing
+macOS-specific. Verified end-to-end against synthetic green-screen test
+clips: frame extraction, chroma-key + despill, shared-bbox cropping,
+WebP export with alpha (confirmed alpha only survives when the source
+actually has soft/anti-aliased edges — a hard-edged test shape that
+crops tight to a fully-opaque region legitimately encodes without an
+alpha channel, which is correct WebP-encoder behavior, not a bug), loop
+seam detection, and zip packaging all worked. Should run identically on
+Windows — `imageio-ffmpeg` ships Windows binaries too, and nothing else
+here touches the OS. Not yet tested on a Windows machine.
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show

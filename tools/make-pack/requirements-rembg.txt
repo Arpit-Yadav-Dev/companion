@@ -1,0 +1,6 @@
+# Optional: only needed for --bg rembg (clips not on a solid colour
+# background). Pulls in onnxruntime + scikit-image + numba — a few
+# hundred MB — so it's kept out of the default requirements.txt.
+#
+#   ./tools/.venv/bin/pip install -r tools/make-pack/requirements-rembg.txt
+rembg
