@@ -32,6 +32,7 @@ pub fn run() {
             commands::set_hit_regions,
             commands::overlay_ready,
             commands::reminder_response,
+            commands::end_scene,
             commands::trigger_test_reminder,
             commands::pause_reminders,
             commands::resume_reminders,

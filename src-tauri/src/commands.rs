@@ -3,6 +3,7 @@ use tauri::{AppHandle, Runtime};
 
 use crate::overlay;
 use crate::scheduler::{self, PauseDuration, SchedulerStatus};
+use crate::stats::DailyStats;
 use crate::tray;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -56,14 +57,25 @@ pub fn overlay_ready<R: Runtime>(app: AppHandle<R>) {
     let _ = overlay::show(&app);
 }
 
-/// Called by the overlay frontend when the director finishes a scene
-/// (yes/later/timeout/skip). Logs the response to stats and reschedules
-/// the reminder, then hides the overlay.
+/// Called by the overlay frontend as soon as the user chooses
+/// (yes/later/timeout/skip) — before the happy/sad/shrug reaction and
+/// walk-out play, not after. Logs the response to stats, reschedules the
+/// reminder, and returns the day's updated stats so the frontend can
+/// show a special "goal reached" moment (confetti) while the character
+/// is still on screen, before `end_scene` hides the window.
 #[tauri::command]
-pub fn reminder_response<R: Runtime>(app: AppHandle<R>, payload: ReminderResponsePayload) {
-    scheduler::handle_response(&app, &payload.reminder_id, &payload.choice);
-    let _ = overlay::hide(&app);
+pub fn reminder_response<R: Runtime>(app: AppHandle<R>, payload: ReminderResponsePayload) -> DailyStats {
+    let stats = scheduler::handle_response(&app, &payload.reminder_id, &payload.choice);
     tray::refresh_tray_text(&app);
+    stats
+}
+
+/// Called once the director's walk-out animation has finished and the
+/// scene is fully done — hides the overlay window and stops the
+/// hit-region polling loop.
+#[tauri::command]
+pub fn end_scene<R: Runtime>(app: AppHandle<R>) {
+    let _ = overlay::hide(&app);
 }
 
 /// Wired to the tray's "Test reminder now" item and the Settings "Test"

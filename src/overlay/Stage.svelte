@@ -7,7 +7,8 @@
   import SvgCharacter from "./SvgCharacter.svelte";
   import PixelCharacter from "./PixelCharacter.svelte";
   import Bubble from "./Bubble.svelte";
-  import type { CharacterPrefs } from "../shared/types";
+  import Confetti from "./Confetti.svelte";
+  import type { CharacterPrefs, GeneralPrefs } from "../shared/types";
 
   let sceneState = $state<SceneState>("hidden");
   let line = $state("");
@@ -15,18 +16,39 @@
   let entranceSide = $state<EntranceSide>("left");
   let yesLabel = $state("YES");
   let laterLabel = $state("Remind me later");
+  let showConfetti = $state(false);
 
   let characterEl: HTMLDivElement | undefined = $state();
   let bubbleEl: HTMLDivElement | undefined = $state();
 
   let characterPrefs = $state<CharacterPrefs | null>(null);
+  let generalPrefs = $state<GeneralPrefs | null>(null);
 
   const director = new Director({
     onStateChange: (s) => (sceneState = s),
     onLineChange: (l) => (line = l),
     onButtonsVisibleChange: (v) => (buttonsVisible = v),
     onEntranceSideChange: (s) => (entranceSide = s),
+    onGoalReached: () => {
+      showConfetti = true;
+      setTimeout(() => (showConfetti = false), 1600);
+    },
   });
+
+  // --- Easter egg: clicking the character itself (not the buttons) 5
+  // times within 1.5s triggers a special reaction. ---
+  let clickTimestamps: number[] = [];
+  let easterEggActive = $state(false);
+
+  function onCharacterClick() {
+    const now = Date.now();
+    clickTimestamps = [...clickTimestamps, now].filter((t) => now - t < 1500);
+    if (clickTimestamps.length >= 5) {
+      clickTimestamps = [];
+      easterEggActive = true;
+      setTimeout(() => (easterEggActive = false), 1200);
+    }
+  }
 
   function reportHitRegions() {
     const rects: HitRect[] = [];
@@ -65,11 +87,18 @@
     const unlistenPromise = webview.listen<ReminderShowPayload>(
       "reminder://show",
       async (event) => {
-        // Re-fetch character prefs on every appearance (cheap, and the
-        // overlay is hidden almost all the time) so Character tab edits
-        // in Settings take effect without needing a dedicated live-reload
-        // event or an overlay restart.
-        characterPrefs = await invoke<CharacterPrefs>("get_character_prefs");
+        // Re-fetch prefs on every appearance (cheap, and the overlay is
+        // hidden almost all the time) so Settings edits take effect
+        // without needing a dedicated live-reload event or an overlay
+        // restart.
+        [characterPrefs, generalPrefs] = await Promise.all([
+          invoke<CharacterPrefs>("get_character_prefs"),
+          invoke<GeneralPrefs>("get_general_prefs"),
+        ]);
+
+        const prefersReducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        director.setReducedMotion(generalPrefs.reducedMotion || prefersReducedMotionMedia);
+        director.setSoundPrefs({ enabled: generalPrefs.soundEnabled, volume: generalPrefs.soundVolume });
 
         // Show the window first — requestAnimationFrame never fires on a
         // hidden window in WKWebView, so anything waiting on a frame
@@ -108,7 +137,10 @@
 
 <div class="stage">
   {#if sceneState !== "hidden"}
-    <div class="scene side-{entranceSide} pos-{(characterPrefs?.position ?? 'bottom_left').replace('_', '-')}">
+    <div
+      class="scene side-{entranceSide} pos-{(characterPrefs?.position ?? 'bottom_left').replace('_', '-')}"
+      class:reduced-motion={generalPrefs?.reducedMotion}
+    >
       <div class="bubble-wrap" bind:this={bubbleEl}>
         {#if line}
           <Bubble
@@ -121,7 +153,18 @@
           />
         {/if}
       </div>
-      <div class="character-wrap state-{sceneState}" bind:this={characterEl}>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div
+        class="character-wrap state-{sceneState}"
+        class:easter-egg={easterEggActive}
+        bind:this={characterEl}
+        onclick={onCharacterClick}
+        role="button"
+        tabindex="-1"
+      >
+        {#if showConfetti}
+          <Confetti />
+        {/if}
         {#if characterPrefs?.activePackId === "pixel"}
           <PixelCharacter
             {sceneState}
@@ -248,13 +291,63 @@
     .scene {
       animation: crossfade 300ms ease both;
     }
-    @keyframes crossfade {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+  }
+
+  /* Same override as the media query above, but driven by the app's own
+     "Reduced motion" setting rather than (or in addition to) the OS
+     preference — the director also shortens its walk-state timing to
+     match (see REDUCED_WALK_MS in director.ts) so the crossfade has time
+     to finish before the state moves on. */
+  .scene.reduced-motion .character-wrap.state-walk_in,
+  .scene.reduced-motion .character-wrap.state-walk_out {
+    animation: none;
+  }
+  .scene.reduced-motion {
+    animation: crossfade 220ms ease both;
+  }
+
+  @keyframes crossfade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .easter-egg {
+    animation: easter-egg-spin 1.2s ease-in-out;
+  }
+  @keyframes easter-egg-spin {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    30% {
+      transform: rotate(20deg) scale(1.15);
+    }
+    60% {
+      transform: rotate(-15deg) scale(1.1);
+    }
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+  .side-right .character-wrap.easter-egg {
+    /* Preserve the mirror while still applying the spin/scale. */
+    animation-name: easter-egg-spin-mirrored;
+  }
+  @keyframes easter-egg-spin-mirrored {
+    0% {
+      transform: scaleX(-1) rotate(0deg) scale(1);
+    }
+    30% {
+      transform: scaleX(-1) rotate(-20deg) scale(1.15);
+    }
+    60% {
+      transform: scaleX(-1) rotate(15deg) scale(1.1);
+    }
+    100% {
+      transform: scaleX(-1) rotate(0deg) scale(1);
     }
   }
 </style>

@@ -88,7 +88,15 @@ impl Default for SchedulerState {
     }
 }
 
-fn load_settings<R: Runtime>(app: &AppHandle<R>) -> (Vec<Reminder>, String, u32) {
+struct LoadedSettings {
+    reminders: Vec<Reminder>,
+    user_name: String,
+    daily_goal: u32,
+    dnd: bool,
+    start_paused: bool,
+}
+
+fn load_settings<R: Runtime>(app: &AppHandle<R>) -> LoadedSettings {
     let store = app.store(STORE_FILE).expect("settings store must open");
 
     let reminders = store
@@ -101,10 +109,26 @@ fn load_settings<R: Runtime>(app: &AppHandle<R>) -> (Vec<Reminder>, String, u32)
             defaults
         });
 
-    let user_name = store
-        .get("userName")
-        .and_then(|v| v.as_str().map(str::to_owned))
+    // GeneralPrefs (name, dnd, start-paused, ...) lives under the
+    // "general" key as one nested object — see settings::GeneralPrefs /
+    // settings::save_general_prefs, which is the single writer for it.
+    let general = store.get("general");
+    let user_name = general
+        .as_ref()
+        .and_then(|v| v.get("userName"))
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
         .unwrap_or_else(|| "there".into());
+    let dnd = general
+        .as_ref()
+        .and_then(|v| v.get("dnd"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let start_paused = general
+        .as_ref()
+        .and_then(|v| v.get("startPaused"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
     let daily_goal = store
         .get("dailyGoal")
@@ -112,22 +136,36 @@ fn load_settings<R: Runtime>(app: &AppHandle<R>) -> (Vec<Reminder>, String, u32)
         .map(|v| v as u32)
         .unwrap_or(8);
 
-    (reminders, user_name, daily_goal)
+    LoadedSettings {
+        reminders,
+        user_name,
+        daily_goal,
+        dnd,
+        start_paused,
+    }
 }
 
 /// Starts the scheduler: loads reminders from the store, seeds each
 /// enabled reminder's next-due time to now + its interval, then spawns the
 /// 1Hz tick loop. Call once from `setup`.
 pub fn start<R: Runtime>(app: &AppHandle<R>) {
-    let (reminders, user_name, daily_goal) = load_settings(app);
+    let loaded = load_settings(app);
 
     let state = app.state::<SchedulerState>();
     {
         let mut inner = state.inner.lock().unwrap();
-        inner.user_name = user_name;
-        inner.daily_goal = daily_goal;
+        inner.user_name = loaded.user_name;
+        inner.daily_goal = loaded.daily_goal;
+        inner.dnd = loaded.dnd;
+        if loaded.start_paused {
+            // "Start paused" per the General tab: pause indefinitely
+            // rather than a fixed duration, since this isn't a daily
+            // reset — far-future paused_until, cleared the same way any
+            // other pause is (tray's "Resume" item).
+            inner.paused_until = Some(Local::now() + chrono::Duration::days(3650));
+        }
         let now = Local::now();
-        for r in &reminders {
+        for r in &loaded.reminders {
             inner.runtime.insert(
                 r.id.clone(),
                 ReminderRuntime {
@@ -136,7 +174,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>) {
                 },
             );
         }
-        inner.reminders = reminders;
+        inner.reminders = loaded.reminders;
     }
 
     let app = app.clone();
@@ -317,11 +355,16 @@ fn render_line(template: &str, name: &str, count: u32, streak: u32, with_morning
     }
 }
 
-/// Called from `commands::reminder_response` once the overlay reports a
-/// choice. Logs stats, reschedules the reminder (snoozed if "later",
-/// normal interval otherwise), and clears the busy/awaiting-response gate
-/// after the minimum gap.
-pub fn handle_response<R: Runtime>(app: &AppHandle<R>, reminder_id: &str, choice: &str) {
+/// Called from `commands::reminder_response` as soon as the overlay
+/// reports a choice (before the reaction/walk-out animation plays).
+/// Logs stats, reschedules the reminder (snoozed if "later", normal
+/// interval otherwise), clears the busy/awaiting-response gate after the
+/// minimum gap, and returns the day's updated stats.
+pub fn handle_response<R: Runtime>(
+    app: &AppHandle<R>,
+    reminder_id: &str,
+    choice: &str,
+) -> stats::DailyStats {
     let state = app.state::<SchedulerState>();
     let now = Local::now();
 
@@ -334,7 +377,15 @@ pub fn handle_response<R: Runtime>(app: &AppHandle<R>, reminder_id: &str, choice
         }
     };
 
-    let _ = stats::record_response(app, choice, is_water, daily_goal);
+    let updated_stats = stats::record_response(app, choice, is_water, daily_goal)
+        .unwrap_or_else(|_| stats::today(app, daily_goal).unwrap_or(stats::DailyStats {
+            date: String::new(),
+            glasses: 0,
+            goal: daily_goal,
+            yes_count: 0,
+            later_count: 0,
+            missed_count: 0,
+        }));
 
     let mut inner = state.inner.lock().unwrap();
     inner.awaiting_response_for = None;
@@ -344,6 +395,8 @@ pub fn handle_response<R: Runtime>(app: &AppHandle<R>, reminder_id: &str, choice
     if let Some(rt) = inner.runtime.get_mut(reminder_id) {
         rt.next_due = now + chrono::Duration::minutes(delay_min as i64);
     }
+
+    updated_stats
 }
 
 pub fn pause<R: Runtime>(app: &AppHandle<R>, duration: PauseDuration) {
@@ -395,7 +448,8 @@ pub fn set_daily_goal<R: Runtime>(app: &AppHandle<R>, goal: u32) {
 /// already existed are left alone, so editing a reminder's lines or
 /// labels doesn't reset its countdown.
 pub fn reload_reminders<R: Runtime>(app: &AppHandle<R>) {
-    let (reminders, _user_name, _daily_goal) = load_settings(app);
+    let loaded = load_settings(app);
+    let reminders = loaded.reminders;
     let state = app.state::<SchedulerState>();
     let mut inner = state.inner.lock().unwrap();
     let now = Local::now();

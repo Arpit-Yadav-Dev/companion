@@ -210,6 +210,66 @@ seam detection, and zip packaging all worked. Should run identically on
 Windows — `imageio-ffmpeg` ships Windows binaries too, and nothing else
 here touches the OS. Not yet tested on a Windows machine.
 
+## Phase 8: polish
+
+- **Sound** (`src/overlay/sound.ts`): Web Audio API (`AudioContext`,
+  oscillators), pure web standard, nothing macOS-specific. **These are
+  placeholder synthesized tones, not real recorded sound-design assets**
+  — the brief calls for bundled `.ogg`/`.m4a` files, and that swap is a
+  tracked follow-up (see the `sound-assets-followup` memory), not
+  something done yet.
+
+- **Reduced motion**: now driven two ways — the OS-level
+  `prefers-reduced-motion` media query (already there from Phase 2) and
+  the app's own `GeneralPrefs.reducedMotion` setting, which is read fresh
+  on every overlay appearance and applied both to the CSS (via a
+  `.reduced-motion` class on `.scene` in `Stage.svelte`, mirroring the
+  media query) and to the director's own wait timings (`REDUCED_WALK_MS`
+  in `director.ts`, so the shortened CSS crossfade and the state-machine
+  timing stay in sync instead of the state jumping ahead of the
+  animation). Pure CSS/JS, no platform branch needed.
+
+- **Confetti / easter egg**: both pure frontend (Svelte component +
+  click-counting), no OS-specific code.
+
+- **`reminder_response` / `end_scene` split**: previously the frontend
+  called a single `reminder_response` command only after the entire
+  walk-out animation finished, which meant stats were recorded late and
+  there was no way to show a goal-reached moment while the character was
+  still visible. Split into `reminder_response` (called immediately on
+  choice; logs stats and returns them so the frontend can detect
+  "just hit today's goal") and `end_scene` (called after the walk-out
+  animation completes; actually hides the window). Pure architecture
+  fix, no platform-specific code — but worth remembering if Windows
+  Phase 9 testing ever needs to trace an overlay-hide-timing bug, since
+  this is exactly the kind of ordering issue that caused the Phase 2
+  "overlay never shows" bug.
+
+- **A real, if minor, bug found and fixed this phase**: `scheduler.rs`'s
+  `load_settings` was reading `user_name`/`dnd`/`start_paused` from
+  non-existent top-level store keys (`"userName"`, etc.), while
+  `settings.rs`'s `save_general_prefs` — the only writer for these
+  values — stores them nested under a single `"general"` object. This
+  meant the scheduler's copy of the user's name, DND state, and
+  start-paused preference were silently wrong on every fresh app launch
+  (only correct after the first in-session Settings edit, since
+  `save_general_prefs` also pushes the value into the live
+  `SchedulerState` directly). Fixed by reading from the correct nested
+  path, and by actually applying `start_paused`/`dnd` at startup (neither
+  was wired to the scheduler's initial state before this).
+
+- **Release build verified**: `npm run tauri build -- --target
+  universal-apple-darwin` successfully produced a genuine universal
+  binary (`lipo -info` confirms both `x86_64` and `arm64` slices), a
+  10.68 MiB `.app`, and a 4.76 MiB `.dmg` — well under the 15 MB
+  installer target from the brief. Bundled `packs/` resources landed at
+  the correct `Contents/Resources/packs/` path inside the `.app` (the
+  `{"../packs/": "packs/"}` map-form resource config from Phase 6 avoids
+  the `_up_` path-mangling a bare `"../packs"` string would have caused).
+  This is unsigned, so first launch needs right-click → Open to bypass
+  Gatekeeper (documented in the project README). Not yet attempted on
+  Windows — that's Phase 9, gated on being asked to start it.
+
 ## Still to do for Windows (tracked here, not implemented yet)
 
 - Verify WebView2 transparent background has no white flash on window show
