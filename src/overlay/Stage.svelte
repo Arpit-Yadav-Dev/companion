@@ -5,8 +5,7 @@
   import type { HitRect, ReminderShowPayload } from "../shared/types";
   import { Director, type SceneState, type EntranceSide } from "./director";
   import SvgCharacter from "./SvgCharacter.svelte";
-  import ScoutCharacter from "./ScoutCharacter.svelte";
-  import MochiCharacter from "./MochiCharacter.svelte";
+  import { svgCharacterFor } from "./characterRegistry";
   import FramesCharacter from "./FramesCharacter.svelte";
   import Bubble from "./Bubble.svelte";
   import Confetti from "./Confetti.svelte";
@@ -29,6 +28,7 @@
   let characterPrefs = $state<CharacterPrefs | null>(null);
   let generalPrefs = $state<GeneralPrefs | null>(null);
   let activeFramesPack = $state<PackInfo | null>(null);
+  let ActiveCharacter = $derived(svgCharacterFor(characterPrefs?.activePackId));
 
   const director = new Director({
     onStateChange: (s) => (sceneState = s),
@@ -195,18 +195,12 @@
             mirrored={entranceSide === "right"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}
           />
-        {:else if characterPrefs?.activePackId === "mochi"}
-          <MochiCharacter
+        {:else if ActiveCharacter}
+          <ActiveCharacter
             {sceneState}
             prop={activeProp}
             mirrored={entranceSide === "right"}
-            scale={(characterPrefs?.sizePercent ?? 100) / 100}
-          />
-        {:else if characterPrefs?.activePackId === "scout"}
-          <ScoutCharacter
-            {sceneState}
-            prop={activeProp}
-            mirrored={entranceSide === "right"}
+            theme={characterPrefs?.theme ?? "blue"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}
           />
         {:else}

@@ -13,8 +13,7 @@
     DownloadProgress,
   } from "../shared/types";
   import SvgCharacter from "../overlay/SvgCharacter.svelte";
-  import ScoutCharacter from "../overlay/ScoutCharacter.svelte";
-  import MochiCharacter from "../overlay/MochiCharacter.svelte";
+  import { svgCharacterFor } from "../overlay/characterRegistry";
   import FramesCharacter from "../overlay/FramesCharacter.svelte";
 
   let prefs = $state<CharacterPrefs | null>(null);
@@ -126,10 +125,9 @@
 </script>
 
 {#snippet characterPreview(pack: PackInfo, scale: number)}
-  {#if pack.manifest.id === "mochi"}
-    <MochiCharacter sceneState="idle" {scale} />
-  {:else if pack.manifest.id === "scout"}
-    <ScoutCharacter sceneState="idle" {scale} />
+  {@const Character = svgCharacterFor(pack.manifest.id)}
+  {#if Character}
+    <Character sceneState="idle" theme={prefs?.theme ?? "blue"} {scale} />
   {:else if pack.manifest.renderer === "svg"}
     <SvgCharacter sceneState="idle" theme={prefs?.theme ?? "blue"} {scale} />
   {:else if pack.manifest.renderer === "frames"}

@@ -48,7 +48,7 @@
 
   <svg class="body-svg" viewBox="0 0 200 215" width="150" height="161" aria-hidden="true">
     <defs>
-      <radialGradient id="mochi-body" cx="38%" cy="28%" r="78%">
+      <radialGradient id="mochi-body" cx="40%" cy="30%" r="76%">
         <stop offset="0%" stop-color="var(--fur-light)" />
         <stop offset="62%" stop-color="var(--fur)" />
         <stop offset="100%" stop-color="var(--fur-shadow)" />
@@ -60,99 +60,91 @@
       </radialGradient>
     </defs>
 
-    <ellipse class="ground-shadow" cx="100" cy="204" rx="46" ry="8" />
+    <ellipse class="ground-shadow" cx="100" cy="200" rx="44" ry="8" />
 
-    <!-- Tail: a long curl that sways, the most cat-like silhouette cue -->
+    <!-- Sitting pose: a tall teardrop body that tapers to a narrow chest,
+         with the tail curled around the base. Deliberately unlike the
+         wide four-legged stance of the dog characters. -->
     <g class="tail-root">
-      <path class="tail" d="M 148 170 Q 182 164 178 128 Q 176 108 160 110" />
-    </g>
-
-    <!-- Hind legs -->
-    <g class="leg leg-back-left" style="transform-origin: 80px 168px">
-      <rect class="leg-seg" x="72" y="168" width="16" height="30" rx="8" />
-      <ellipse class="paw" cx="80" cy="198" rx="12" ry="7" />
-    </g>
-    <g class="leg leg-back-right" style="transform-origin: 120px 168px">
-      <rect class="leg-seg" x="112" y="168" width="16" height="30" rx="8" />
-      <ellipse class="paw" cx="120" cy="198" rx="12" ry="7" />
+      <path
+        class="tail"
+        d="M 68 192 Q 26 192 30 160 Q 33 138 52 142"
+      />
     </g>
 
     <g class="body-squash">
-      <ellipse class="body" cx="100" cy="155" rx="44" ry="38" />
-      <ellipse class="belly" cx="100" cy="163" rx="24" ry="22" />
+      <path
+        class="body"
+        d="M 100 96
+           C 128 96 142 132 144 164
+           C 146 188 128 198 100 198
+           C 72 198 54 188 56 164
+           C 58 132 72 96 100 96 Z"
+      />
+      <!-- Pale chest bib down the front -->
+      <path class="bib" d="M 100 126 C 114 126 120 152 118 176 C 116 190 84 190 82 176 C 80 152 86 126 100 126 Z" />
     </g>
 
-    <!-- Front legs -->
-    <g class="leg leg-front-left" style="transform-origin: 78px 160px">
-      <rect class="leg-seg" x="71" y="160" width="14" height="34" rx="7" />
-      <ellipse class="paw" cx="78" cy="194" rx="11" ry="6.5" />
-    </g>
-    <g class="leg leg-front-right" style="transform-origin: 122px 160px">
-      <rect class="leg-seg" x="115" y="160" width="14" height="34" rx="7" />
-      <ellipse class="paw" cx="122" cy="194" rx="11" ry="6.5" />
+    <!-- Front paws tucked together at the base, cat-sitting style -->
+    <g class="paws">
+      <ellipse class="paw paw-left" cx="84" cy="192" rx="14" ry="8" />
+      <ellipse class="paw paw-right" cx="116" cy="192" rx="14" ry="8" />
+      <path class="toe" d="M 79 190 L 79 194 M 84 189 L 84 194 M 89 190 L 89 194" />
+      <path class="toe" d="M 111 190 L 111 194 M 116 189 L 116 194 M 121 190 L 121 194" />
     </g>
 
     <g class="head-group">
-      <!-- Pointed ears with inner pink -->
-      <path class="ear" d="M 66 92 L 56 50 L 92 74 Z" />
-      <path class="ear" d="M 134 92 L 144 50 L 108 74 Z" />
-      <path class="ear-inner" d="M 70 88 L 63 60 L 86 76 Z" />
-      <path class="ear-inner" d="M 130 88 L 137 60 L 114 76 Z" />
+      <!-- Wide, low-set triangular ears -->
+      <path class="ear ear-left" d="M 62 78 L 54 36 L 94 62 Z" />
+      <path class="ear ear-right" d="M 138 78 L 146 36 L 106 62 Z" />
+      <path class="ear-inner" d="M 67 74 L 61 46 L 87 64 Z" />
+      <path class="ear-inner" d="M 133 74 L 139 46 L 113 64 Z" />
 
-      <circle class="head" cx="100" cy="106" r="42" />
-      <ellipse class="head-shine" cx="82" cy="88" rx="14" ry="10" />
+      <!-- Rounder, wider head than the dogs' circle -->
+      <ellipse class="head" cx="100" cy="90" rx="46" ry="40" />
+      <ellipse class="head-shine" cx="80" cy="72" rx="15" ry="10" />
 
-      <ellipse class="muzzle" cx="100" cy="132" rx="22" ry="14" />
+      <!-- Cheek tufts give the wide cat face shape -->
+      <path class="cheek" d="M 56 94 Q 46 104 58 112" />
+      <path class="cheek" d="M 144 94 Q 154 104 142 112" />
 
-      <ellipse class="blush" cx="70" cy="122" rx="8" ry="5" />
-      <ellipse class="blush" cx="130" cy="122" rx="8" ry="5" />
+      <ellipse class="muzzle" cx="100" cy="110" rx="24" ry="15" />
 
+      <ellipse class="blush" cx="68" cy="104" rx="9" ry="5" />
+      <ellipse class="blush" cx="132" cy="104" rx="9" ry="5" />
+
+      <!-- Tall almond eyes with slit pupils — the clearest cat cue -->
       <g class="eye" class:closed={eyesClosed}>
-        <ellipse class="eye-white" cx="82" cy="104" rx="10" ry="11" />
-        <ellipse
-          class="pupil"
-          cx={82 + pupilOffset.x}
-          cy={104 + pupilOffset.y}
-          rx="4"
-          ry="8.5"
-        />
-        <circle class="eye-shine" cx={82 + pupilOffset.x - 1.6} cy={104 + pupilOffset.y - 3} r="1.7" />
-        <path class="eyelid" d="M 72 104 Q 82 104 92 104" />
+        <ellipse class="eye-white" cx="82" cy="86" rx="11" ry="12" />
+        <ellipse class="pupil" cx={82 + pupilOffset.x} cy={86 + pupilOffset.y} rx="3.4" ry="10" />
+        <circle class="eye-shine" cx={82 + pupilOffset.x - 2} cy={86 + pupilOffset.y - 4} r="2" />
+        <path class="eyelid" d="M 71 86 Q 82 86 93 86" />
       </g>
       <g class="eye" class:closed={eyesClosed}>
-        <ellipse class="eye-white" cx="118" cy="104" rx="10" ry="11" />
-        <ellipse
-          class="pupil"
-          cx={118 + pupilOffset.x}
-          cy={104 + pupilOffset.y}
-          rx="4"
-          ry="8.5"
-        />
-        <circle class="eye-shine" cx={118 + pupilOffset.x - 1.6} cy={104 + pupilOffset.y - 3} r="1.7" />
-        <path class="eyelid" d="M 108 104 Q 118 104 128 104" />
+        <ellipse class="eye-white" cx="118" cy="86" rx="11" ry="12" />
+        <ellipse class="pupil" cx={118 + pupilOffset.x} cy={86 + pupilOffset.y} rx="3.4" ry="10" />
+        <circle class="eye-shine" cx={118 + pupilOffset.x - 2} cy={86 + pupilOffset.y - 4} r="2" />
+        <path class="eyelid" d="M 107 86 Q 118 86 129 86" />
       </g>
 
-      <!-- Nose + mouth -->
-      <path class="nose" d="M 94 124 L 106 124 L 100 131 Z" />
+      <path class="nose" d="M 93 104 L 107 104 L 100 112 Z" />
       <path class="mouth" d={mouthPath} />
 
-      <!-- Whiskers -->
       <g class="whiskers">
-        <path d="M 74 130 L 48 126" />
-        <path d="M 74 136 L 50 138" />
-        <path d="M 126 130 L 152 126" />
-        <path d="M 126 136 L 150 138" />
+        <path d="M 72 112 L 42 106" />
+        <path d="M 72 118 L 44 120" />
+        <path d="M 128 112 L 158 106" />
+        <path d="M 128 118 L 156 120" />
       </g>
 
-      <ellipse class="tear" cx="88" cy="114" rx="3" ry="5" />
+      <ellipse class="tear" cx="86" cy="98" rx="3" ry="5" />
 
       {#if prop === "lookfar"}
-        <ellipse class="prop-lookfar" cx="126" cy="94" rx="10" ry="7" />
+        <ellipse class="prop-lookfar" cx="128" cy="76" rx="11" ry="7" />
       {:else if prop !== "stretch" && prop !== "posture"}
-        <!-- Milk saucer: the cat's take on the water-bottle prop -->
         <g class="prop-saucer">
-          <ellipse cx="146" cy="140" rx="16" ry="6" />
-          <path d="M 132 138 Q 146 148 160 138" />
+          <ellipse cx="150" cy="150" rx="17" ry="6" />
+          <path d="M 135 148 Q 150 159 165 148" />
         </g>
       {/if}
     </g>
@@ -167,13 +159,12 @@
 <style>
   .mochi {
     --scale: 1;
-    /* Warm ginger tabby — distinct from Scout's cool grey husky so the
-       two read as different animals at thumbnail size. */
-    --fur-light: #f6c98f;
-    --fur: #e8a85c;
-    --fur-shadow: #c07b35;
+    /* Warm ginger tabby, against Scout's cool grey husky. */
+    --fur-light: #f8d09b;
+    --fur: #e9a65a;
+    --fur-shadow: #c47c34;
     --fur-dark: #8a5421;
-    --muzzle: #fdf1e0;
+    --bib: #fdf3e4;
     --blush: #ff9ec7;
 
     position: relative;
@@ -210,9 +201,9 @@
     stroke: var(--fur-dark);
     stroke-width: 2;
   }
-  .belly {
-    fill: var(--muzzle);
-    opacity: 0.85;
+  .bib {
+    fill: var(--bib);
+    opacity: 0.9;
   }
   .head {
     fill: url(#mochi-head);
@@ -220,18 +211,30 @@
     stroke-width: 2;
   }
   .head-shine {
-    fill: rgba(255, 255, 255, 0.38);
+    fill: rgba(255, 255, 255, 0.4);
     filter: blur(2px);
   }
   .muzzle {
-    fill: var(--muzzle);
+    fill: var(--bib);
+  }
+  .cheek {
+    fill: none;
+    stroke: var(--fur-shadow);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.7;
   }
 
-  .leg-seg,
   .paw {
-    fill: var(--fur);
+    fill: var(--fur-light);
     stroke: var(--fur-dark);
     stroke-width: 2;
+  }
+  .toe {
+    stroke: var(--fur-shadow);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    opacity: 0.8;
   }
 
   .ear {
@@ -244,20 +247,20 @@
   .tail {
     fill: none;
     stroke: var(--fur);
-    stroke-width: 13;
+    stroke-width: 14;
     stroke-linecap: round;
   }
   .tail-root {
-    transform-origin: 148px 170px;
-    animation: tail-idle 3.2s ease-in-out infinite;
+    transform-origin: 68px 192px;
+    animation: tail-idle 3.4s ease-in-out infinite;
   }
   @keyframes tail-idle {
     0%,
     100% {
-      transform: rotate(-4deg);
+      transform: rotate(-3deg);
     }
     50% {
-      transform: rotate(6deg);
+      transform: rotate(5deg);
     }
   }
 
@@ -267,7 +270,7 @@
     stroke-width: 1.5;
   }
   .pupil {
-    fill: #2a1f14;
+    fill: #23331f;
     transition:
       cx 80ms linear,
       cy 80ms linear;
@@ -306,7 +309,7 @@
   }
   .whiskers {
     fill: none;
-    stroke: rgba(80, 55, 30, 0.45);
+    stroke: rgba(80, 55, 30, 0.42);
     stroke-width: 1.6;
     stroke-linecap: round;
   }
@@ -314,7 +317,6 @@
     fill: var(--blush);
     opacity: 0.5;
   }
-
   .tear {
     fill: #bfe6ff;
     opacity: 0;
@@ -331,7 +333,7 @@
     stroke-width: 1.5;
   }
   .prop-lookfar {
-    fill: var(--fur);
+    fill: var(--fur-light);
     stroke: var(--fur-dark);
     stroke-width: 1.5;
   }
@@ -343,70 +345,36 @@
     fill: #ffe14d;
   }
   .s1 {
-    transform: translate(44px, 62px);
+    transform: translate(44px, 52px);
   }
   .s2 {
-    transform: translate(158px, 84px);
+    transform: translate(158px, 74px);
   }
 
-  /* --- Walk cycle: diagonal pairs, same gait model as Scout --- */
-  .leg {
-    transition: transform 180ms ease;
-  }
-  .state-walk_in .leg-front-left,
-  .state-walk_out .leg-front-left,
-  .state-walk_in .leg-back-right,
-  .state-walk_out .leg-back-right {
-    animation: swing-a calc(360ms / var(--anim-speed, 1)) ease-in-out infinite;
-  }
-  .state-walk_in .leg-front-right,
-  .state-walk_out .leg-front-right,
-  .state-walk_in .leg-back-left,
-  .state-walk_out .leg-back-left {
-    animation: swing-b calc(360ms / var(--anim-speed, 1)) ease-in-out infinite;
-  }
-  @keyframes swing-a {
-    0%,
-    100% {
-      transform: rotate(-20deg);
-    }
-    50% {
-      transform: rotate(20deg);
-    }
-  }
-  @keyframes swing-b {
-    0%,
-    100% {
-      transform: rotate(20deg);
-    }
-    50% {
-      transform: rotate(-20deg);
-    }
-  }
-
+  /* A sitting cat has no walk cycle to run — it hops, body and all,
+     which also keeps it visually distinct from the dogs' leg-over-leg
+     gait at a glance. */
   .state-walk_in .body-svg,
   .state-walk_out .body-svg {
     animation:
       breathe 2.8s ease-in-out infinite,
-      walk-bob calc(360ms / var(--anim-speed, 1)) ease-in-out infinite;
+      hop calc(420ms / var(--anim-speed, 1)) ease-in-out infinite;
   }
-  @keyframes walk-bob {
+  @keyframes hop {
     0%,
-    50%,
     100% {
-      transform: translateY(0) rotate(0deg);
+      transform: translateY(0) scaleY(1);
     }
-    25% {
-      transform: translateY(-4px) rotate(-1.5deg);
+    30% {
+      transform: translateY(-12px) scaleY(1.05);
     }
-    75% {
-      transform: translateY(-4px) rotate(1.5deg);
+    60% {
+      transform: translateY(0) scaleY(0.94);
     }
   }
-
   .state-walk_in .tail-root,
   .state-walk_out .tail-root {
-    animation: tail-walk calc(360ms / var(--anim-speed, 1)) ease-in-out infinite;
+    animation: tail-walk calc(420ms / var(--anim-speed, 1)) ease-in-out infinite;
   }
   @keyframes tail-walk {
     0%,
@@ -414,11 +382,10 @@
       transform: rotate(-10deg);
     }
     50% {
-      transform: rotate(10deg);
+      transform: rotate(12deg);
     }
   }
 
-  /* --- States --- */
   .state-ask .prop-saucer,
   .state-ask .prop-lookfar {
     animation: prop-bob 1.6s ease-in-out infinite;
@@ -447,7 +414,7 @@
   }
   .state-happy .body-squash {
     animation: happy-bounce 380ms ease-in-out infinite;
-    transform-origin: 100px 196px;
+    transform-origin: 100px 198px;
   }
   .state-happy .sparkles {
     opacity: 1;
@@ -489,32 +456,31 @@
     }
   }
 
-  .state-shrug .leg-front-left,
-  .state-shrug .leg-front-right {
-    animation: shrug-legs 600ms ease-out both;
+  .state-shrug .paws {
+    animation: shrug-paws 600ms ease-out both;
   }
-  @keyframes shrug-legs {
+  @keyframes shrug-paws {
     from {
       transform: translateY(0);
     }
     to {
-      transform: translateY(-7px);
+      transform: translateY(-6px);
     }
   }
 
   .state-sad .ear {
-    transform: translateY(6px) scale(0.94);
-    transform-origin: 100px 90px;
+    transform: translateY(7px) scale(0.93);
+    transform-origin: 100px 78px;
   }
   .state-sad .tail-root {
-    transform: rotate(-22deg) translateY(10px);
+    transform: rotate(-18deg);
   }
   .state-sad .tear {
     opacity: 1;
     animation: tear-drop 1.4s ease-in infinite;
   }
   .state-sad .head-group {
-    transform: translateY(4px) rotate(-3deg);
+    transform: translateY(5px) rotate(-3deg);
   }
   @keyframes tear-drop {
     0% {
@@ -530,23 +496,23 @@
     }
   }
 
-  .state-wave .leg-front-right {
-    animation: wave 500ms ease-in-out 3;
-    transform-origin: 122px 160px;
+  .state-wave .paw-right {
+    animation: wave 520ms ease-in-out 3;
+    transform-origin: 116px 192px;
   }
   @keyframes wave {
     0%,
     100% {
-      transform: rotate(0deg);
+      transform: rotate(0deg) translateY(0);
     }
     50% {
-      transform: rotate(-48deg);
+      transform: rotate(-40deg) translateY(-18px);
     }
   }
 
   /* --- Idle gestures --- */
   .head-group {
-    transform-origin: 100px 150px;
+    transform-origin: 100px 130px;
   }
   .gesture-groom.state-idle .head-group {
     animation: gesture-groom 1400ms ease-in-out;
@@ -558,27 +524,27 @@
     }
     35%,
     65% {
-      transform: rotate(-14deg) translateY(8px);
+      transform: rotate(-16deg) translateY(10px);
     }
   }
-  .gesture-groom.state-idle .leg-front-left {
+  .gesture-groom.state-idle .paw-left {
     animation: gesture-groom-paw 1400ms ease-in-out;
-    transform-origin: 78px 160px;
+    transform-origin: 84px 192px;
   }
   @keyframes gesture-groom-paw {
     0%,
     100% {
-      transform: rotate(0deg);
+      transform: translateY(0) rotate(0deg);
     }
     35%,
     65% {
-      transform: rotate(-58deg) translate(4px, -10px);
+      transform: translateY(-34px) rotate(-18deg);
     }
   }
 
-  .gesture-earflick.state-idle .ear {
-    animation: gesture-earflick 700ms ease-in-out 2;
-    transform-origin: 100px 90px;
+  .gesture-earflick.state-idle .ear-right {
+    animation: gesture-earflick 620ms ease-in-out 2;
+    transform-origin: 138px 78px;
   }
   @keyframes gesture-earflick {
     0%,
@@ -586,13 +552,13 @@
       transform: rotate(0deg);
     }
     50% {
-      transform: rotate(-9deg);
+      transform: rotate(-12deg);
     }
   }
 
   .gesture-stretch-back.state-idle .body-squash {
     animation: gesture-stretch 1400ms ease-in-out;
-    transform-origin: 100px 196px;
+    transform-origin: 100px 198px;
   }
   @keyframes gesture-stretch {
     0%,
@@ -601,7 +567,7 @@
     }
     40%,
     60% {
-      transform: scale(1.1, 0.9) translateY(4px);
+      transform: scale(1.08, 0.93) translateY(4px);
     }
   }
 
@@ -621,7 +587,7 @@
     height: 9px;
     border-radius: 50%;
     background: rgba(200, 180, 150, 0.5);
-    animation: puff-rise 410ms ease-out infinite;
+    animation: puff-rise 430ms ease-out infinite;
   }
   .p1 {
     left: 10px;
@@ -629,11 +595,11 @@
   }
   .p2 {
     left: 31px;
-    animation-delay: 135ms;
+    animation-delay: 140ms;
   }
   .p3 {
     left: 52px;
-    animation-delay: 270ms;
+    animation-delay: 280ms;
   }
   @keyframes puff-rise {
     0% {
