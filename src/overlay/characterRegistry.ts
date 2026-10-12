@@ -10,6 +10,11 @@ import SvgCharacter from "./SvgCharacter.svelte";
 import ScoutCharacter from "./ScoutCharacter.svelte";
 import MochiCharacter from "./MochiCharacter.svelte";
 import PipCharacter from "./PipCharacter.svelte";
+import HopCharacter from "./HopCharacter.svelte";
+import FlexCharacter from "./FlexCharacter.svelte";
+import BaoCharacter from "./BaoCharacter.svelte";
+import BoltCharacter from "./BoltCharacter.svelte";
+import SunnyCharacter from "./SunnyCharacter.svelte";
 
 /** Every hand-drawn character, keyed by its pack id. */
 export const SVG_CHARACTERS: Record<string, Component<any>> = {
@@ -17,6 +22,11 @@ export const SVG_CHARACTERS: Record<string, Component<any>> = {
   scout: ScoutCharacter,
   mochi: MochiCharacter,
   pip: PipCharacter,
+  hop: HopCharacter,
+  flex: FlexCharacter,
+  bao: BaoCharacter,
+  bolt: BoltCharacter,
+  sunny: SunnyCharacter,
 };
 
 /**

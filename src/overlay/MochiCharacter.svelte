@@ -143,8 +143,8 @@
         <ellipse class="prop-lookfar" cx="128" cy="76" rx="11" ry="7" />
       {:else if prop !== "stretch" && prop !== "posture"}
         <g class="prop-saucer">
-          <ellipse cx="150" cy="150" rx="17" ry="6" />
-          <path d="M 135 148 Q 150 159 165 148" />
+          <ellipse cx="152" cy="190" rx="18" ry="6.5" />
+          <path d="M 136 188 Q 152 199 168 188" />
         </g>
       {/if}
     </g>

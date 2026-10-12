@@ -216,9 +216,9 @@
           </g>
         {:else if prop !== "stretch" && prop !== "posture"}
           <g class="prop-ball">
-            <circle cx="134" cy="128" r="11" />
-            <path d="M 126 122 Q 134 128 126 134" />
-            <path d="M 142 122 Q 134 128 142 134" />
+            <circle cx="150" cy="190" r="12" />
+            <path d="M 141 183 Q 150 190 141 197" />
+            <path d="M 159 183 Q 150 190 159 197" />
           </g>
         {/if}
       </g>
@@ -442,7 +442,7 @@
 
   .prop-ball {
     opacity: 0;
-    transform-origin: 134px 128px;
+    transform-origin: 150px 190px;
   }
   .prop-ball circle {
     fill: #e8503a;

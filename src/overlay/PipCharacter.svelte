@@ -112,8 +112,8 @@
       {:else if prop !== "stretch" && prop !== "posture"}
         <!-- An ice cube in a glass: the penguin's take on the drink prop -->
         <g class="prop-ice">
-          <path d="M 150 128 L 170 128 L 166 156 L 154 156 Z" />
-          <rect x="155" y="134" width="9" height="9" rx="2" />
+          <path d="M 150 136 L 170 136 L 166 164 L 154 164 Z" />
+          <rect x="155" y="142" width="9" height="9" rx="2" />
         </g>
       {/if}
     </g>
