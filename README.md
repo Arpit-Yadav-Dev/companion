@@ -1,5 +1,9 @@
 # Companion
 
+> **Work in progress.** This is under active development — the UI is
+> being reworked, more characters are on the way, and no installer has
+> been released yet. The code runs, but expect rough edges.
+
 A tiny menu-bar desktop mascot that reminds you to drink water, stretch,
 rest your eyes, and move — by walking onto your screen, asking a quick
 yes/no question, and walking back off. Built with Tauri v2 (Rust) +
