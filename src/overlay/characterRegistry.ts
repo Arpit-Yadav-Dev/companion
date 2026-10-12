@@ -17,6 +17,9 @@ import BoltCharacter from "./BoltCharacter.svelte";
 import SunnyCharacter from "./SunnyCharacter.svelte";
 import LunaCharacter from "./LunaCharacter.svelte";
 import SproutCharacter from "./SproutCharacter.svelte";
+import BuzzCharacter from "./BuzzCharacter.svelte";
+import NimbusCharacter from "./NimbusCharacter.svelte";
+import AuraCharacter from "./AuraCharacter.svelte";
 
 /** Every hand-drawn character, keyed by its pack id. */
 export const SVG_CHARACTERS: Record<string, Component<any>> = {
@@ -31,6 +34,9 @@ export const SVG_CHARACTERS: Record<string, Component<any>> = {
   sunny: SunnyCharacter,
   luna: LunaCharacter,
   sprout: SproutCharacter,
+  buzz: BuzzCharacter,
+  nimbus: NimbusCharacter,
+  aura: AuraCharacter,
 };
 
 /**
