@@ -14,7 +14,7 @@ macOS-specific and what Windows will need.
 - A tray/menu-bar icon with live "Next at … · countdown" and
   Active/Paused status
 - An animated character (two built-in ones: **Sip**, a water droplet, and
-  **Pixel**, a cat) that walks onto your screen, asks its question with a
+  **Scout**, a husky) that walks onto your screen, asks its question with a
   bold sticker-style speech bubble, and reacts to your answer — all while
   staying click-through everywhere except the character and its buttons,
   so it never gets in your way
@@ -89,7 +89,7 @@ src/                  Svelte frontend
     director.ts         # the scene state machine (walk in -> ask -> react -> walk out)
     Stage.svelte         # ties the director to the character/bubble components
     SvgCharacter.svelte   # "Sip" — the built-in water-droplet character
-    PixelCharacter.svelte # "Pixel" — the built-in cat character
+    ScoutCharacter.svelte # "Scout" — the built-in husky character
     SpritePlayer.ts       # canvas player for imported "frames"-renderer packs
     Bubble.svelte         # the speech bubble (word-pop text, pill buttons)
     Confetti.svelte       # the daily-goal-reached celebration burst
