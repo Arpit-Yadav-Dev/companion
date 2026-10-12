@@ -1,18 +1,156 @@
 //! Character pack discovery, validation, and import. A pack is a folder
 //! with `pack.json` + assets, living either in the bundled `packs/`
 //! directory (shipped with the app) or the user packs directory under the
-//! app data dir (imported via .zip).
+//! app data dir (imported via .zip, or downloaded from the catalog).
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_dialog::DialogExt;
 
 pub const REQUIRED_STATES: &[&str] = &[
     "walk_in", "idle", "ask", "happy", "shrug", "sad", "wave", "walk_out",
 ];
+
+/// Catalog of characters available to download rather than ship in the
+/// app. Video-based packs are several MB each, so bundling them would
+/// bloat the installer for characters most users won't pick — they're
+/// hosted as GitHub release assets and fetched on demand instead.
+const CATALOG_BASE_URL: &str =
+    "https://github.com/Arpit-Yadav-Dev/companion/releases/download/characters-v1";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogEntry {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    /// Approximate download size, for showing before the user commits.
+    pub size_mb: f32,
+    pub url: String,
+    /// Bundled still frame (a few KB) so the card can show what the
+    /// character looks like before anything is downloaded.
+    pub preview: String,
+}
+
+fn catalog() -> Vec<CatalogEntry> {
+    [
+        ("dancing-dog", "Dancing Dog", "A 3D cartoon dog with plenty of energy", 2.4),
+        ("ellie", "Ellie", "A cheerful pink cartoon elephant", 2.6),
+    ]
+    .into_iter()
+    .map(|(id, name, description, size_mb)| CatalogEntry {
+        id: id.to_string(),
+        name: name.to_string(),
+        description: description.to_string(),
+        size_mb,
+        url: format!("{CATALOG_BASE_URL}/{id}.zip"),
+        preview: format!("/catalog/{id}.webp"),
+    })
+    .collect()
+}
+
+/// The downloadable characters, each flagged with whether it's already
+/// installed so the UI can show "Download" vs nothing.
+#[tauri::command]
+pub fn list_catalog<R: Runtime>(app: AppHandle<R>) -> Vec<CatalogEntryStatus> {
+    let installed: Vec<String> = list_packs(app)
+        .into_iter()
+        .map(|p| p.manifest.id)
+        .collect();
+
+    catalog()
+        .into_iter()
+        .map(|entry| CatalogEntryStatus {
+            installed: installed.contains(&entry.id),
+            entry,
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogEntryStatus {
+    #[serde(flatten)]
+    pub entry: CatalogEntry,
+    pub installed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DownloadProgress {
+    id: String,
+    /// 0-100, or None when the server didn't send a content-length and we
+    /// can't know the total ahead of time.
+    percent: Option<u8>,
+}
+
+/// Downloads a catalog character and installs it, emitting
+/// `pack://download-progress` as it goes so the UI can show a bar.
+#[tauri::command]
+pub async fn download_pack<R: Runtime>(app: AppHandle<R>, id: String) -> Result<PackInfo, String> {
+    let entry = catalog()
+        .into_iter()
+        .find(|e| e.id == id)
+        .ok_or_else(|| format!("unknown character: {id}"))?;
+
+    let response = reqwest::get(&entry.url)
+        .await
+        .map_err(|e| format!("could not reach the download server: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "download failed with status {} — the character may have been moved",
+            response.status()
+        ));
+    }
+
+    let total = response.content_length();
+
+    // Stream to a temp file rather than buffering several MB in memory.
+    let tmp_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("could not resolve cache dir: {e}"))?;
+    fs::create_dir_all(&tmp_dir).map_err(|e| format!("could not create cache dir: {e}"))?;
+    let tmp_zip = tmp_dir.join(format!("{id}-download.zip"));
+
+    let download_result = (|| async {
+        let mut file =
+            fs::File::create(&tmp_zip).map_err(|e| format!("could not write download: {e}"))?;
+        let mut downloaded: u64 = 0;
+        let mut last_percent: Option<u8> = None;
+        let mut stream = response.bytes_stream();
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| format!("download interrupted: {e}"))?;
+            file.write_all(&chunk)
+                .map_err(|e| format!("could not write download: {e}"))?;
+            downloaded += chunk.len() as u64;
+
+            let percent = total.map(|t| ((downloaded * 100) / t.max(1)).min(100) as u8);
+            // Only emit on change, so a fast download doesn't flood the
+            // frontend with hundreds of identical events.
+            if percent != last_percent {
+                last_percent = percent;
+                let _ = app.emit(
+                    "pack://download-progress",
+                    DownloadProgress { id: id.clone(), percent },
+                );
+            }
+        }
+        Ok::<(), String>(())
+    })()
+    .await;
+
+    let result = download_result.and_then(|()| install_pack_from_zip(&app, &tmp_zip));
+    let _ = fs::remove_file(&tmp_zip);
+    result
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -213,7 +351,14 @@ pub async fn import_pack<R: Runtime>(app: AppHandle<R>) -> Result<Option<PackInf
         .into_path()
         .map_err(|e| format!("invalid file path: {e}"))?;
 
-    let packs_dir = user_packs_dir(&app).ok_or("could not resolve app data dir")?;
+    install_pack_from_zip(&app, &zip_path).map(Some)
+}
+
+/// Extracts a `.zip` into the user packs directory and validates it.
+/// Shared by the file-picker import and the download flow so both get the
+/// same staging/validation/rollback behaviour.
+fn install_pack_from_zip<R: Runtime>(app: &AppHandle<R>, zip_path: &Path) -> Result<PackInfo, String> {
+    let packs_dir = user_packs_dir(app).ok_or("could not resolve app data dir")?;
     fs::create_dir_all(&packs_dir).map_err(|e| format!("failed to create packs dir: {e}"))?;
 
     // Extract into a temp staging folder first, so a failed/invalid
@@ -238,25 +383,33 @@ pub async fn import_pack<R: Runtime>(app: AppHandle<R>) -> Result<Option<PackInf
         return Err(e);
     }
 
-    // The zip may or may not wrap its contents in a single top-level
-    // folder; find wherever pack.json actually ended up.
-    let manifest_dir = find_pack_json_dir(&staging_dir)
-        .ok_or_else(|| "zip does not contain a pack.json".to_string())?;
+    // Validation and install, with the staging directory torn down on
+    // every exit path — an early `?` here used to leave it behind.
+    let installed = (|| -> Result<PackInfo, String> {
+        // The zip may or may not wrap its contents in a single top-level
+        // folder; find wherever pack.json actually ended up.
+        let manifest_dir = find_pack_json_dir(&staging_dir)
+            .ok_or_else(|| "zip does not contain a pack.json".to_string())?;
 
-    let pack = load_pack_dir(&manifest_dir).ok_or_else(|| {
-        "pack.json is missing required fields or failed validation".to_string()
-    })?;
+        let pack = load_pack_dir(&manifest_dir).ok_or_else(|| {
+            "pack.json is missing required fields or failed validation".to_string()
+        })?;
 
-    let final_dir = packs_dir.join(&pack.manifest.id);
-    if final_dir.exists() {
-        fs::remove_dir_all(&final_dir).map_err(|e| format!("failed to replace existing pack: {e}"))?;
-    }
-    fs::rename(&manifest_dir, &final_dir).map_err(|e| format!("failed to install pack: {e}"))?;
-    let _ = fs::remove_dir_all(&staging_dir); // clean up any staging leftovers (e.g. wrapper folder)
+        let final_dir = packs_dir.join(&pack.manifest.id);
+        if final_dir.exists() {
+            fs::remove_dir_all(&final_dir)
+                .map_err(|e| format!("failed to replace existing pack: {e}"))?;
+        }
+        fs::rename(&manifest_dir, &final_dir)
+            .map_err(|e| format!("failed to install pack: {e}"))?;
 
-    let mut pack = pack;
-    pack.dir = final_dir.to_string_lossy().to_string();
-    Ok(Some(pack))
+        let mut pack = pack;
+        pack.dir = final_dir.to_string_lossy().to_string();
+        Ok(pack)
+    })();
+
+    let _ = fs::remove_dir_all(&staging_dir);
+    installed
 }
 
 fn find_pack_json_dir(root: &Path) -> Option<PathBuf> {

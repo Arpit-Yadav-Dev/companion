@@ -6,6 +6,7 @@
   import { Director, type SceneState, type EntranceSide } from "./director";
   import SvgCharacter from "./SvgCharacter.svelte";
   import ScoutCharacter from "./ScoutCharacter.svelte";
+  import MochiCharacter from "./MochiCharacter.svelte";
   import FramesCharacter from "./FramesCharacter.svelte";
   import Bubble from "./Bubble.svelte";
   import Confetti from "./Confetti.svelte";
@@ -191,6 +192,13 @@
             {sceneState}
             manifest={activeFramesPack.manifest}
             packDir={activeFramesPack.dir}
+            mirrored={entranceSide === "right"}
+            scale={(characterPrefs?.sizePercent ?? 100) / 100}
+          />
+        {:else if characterPrefs?.activePackId === "mochi"}
+          <MochiCharacter
+            {sceneState}
+            prop={activeProp}
             mirrored={entranceSide === "right"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}
           />

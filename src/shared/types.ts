@@ -125,3 +125,22 @@ export interface PackInfo {
   manifest: PackManifest;
   dir: string;
 }
+
+/** A character offered for download rather than bundled with the app. */
+export interface CatalogEntry {
+  id: string;
+  name: string;
+  description: string;
+  sizeMb: number;
+  url: string;
+  /** Bundled still frame showing the character before download. */
+  preview: string;
+  installed: boolean;
+}
+
+/** Payload of the `pack://download-progress` event. */
+export interface DownloadProgress {
+  id: string;
+  /** 0-100, or null when the server didn't report a total size. */
+  percent: number | null;
+}

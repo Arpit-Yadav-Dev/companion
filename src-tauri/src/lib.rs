@@ -52,6 +52,8 @@ pub fn run() {
             settings::app_version,
             packs::list_packs,
             packs::import_pack,
+            packs::list_catalog,
+            packs::download_pack,
         ])
         .manage(scheduler::SchedulerState::default())
         .setup(|app| {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
   import type {
     CharacterPrefs,
     ThemeName,
@@ -8,16 +9,23 @@
     PositionPref,
     PackInfo,
     Reminder,
+    CatalogEntry,
+    DownloadProgress,
   } from "../shared/types";
   import SvgCharacter from "../overlay/SvgCharacter.svelte";
   import ScoutCharacter from "../overlay/ScoutCharacter.svelte";
+  import MochiCharacter from "../overlay/MochiCharacter.svelte";
   import FramesCharacter from "../overlay/FramesCharacter.svelte";
 
   let prefs = $state<CharacterPrefs | null>(null);
   let packs = $state<PackInfo[]>([]);
   let reminders = $state<Reminder[]>([]);
+  let catalog = $state<CatalogEntry[]>([]);
   let importing = $state(false);
   let importError = $state("");
+  /** id -> 0-100, or null while a download has started but has no total yet. */
+  let downloading = $state<Record<string, number | null>>({});
+  let downloadError = $state<Record<string, string>>({});
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const THEMES: { value: ThemeName; label: string }[] = [
@@ -46,13 +54,43 @@
     posture: "Sit up straight",
   };
 
-  onMount(async () => {
-    [prefs, packs, reminders] = await Promise.all([
-      invoke<CharacterPrefs>("get_character_prefs"),
-      invoke<PackInfo[]>("list_packs"),
-      invoke<Reminder[]>("get_reminders"),
-    ]);
+  onMount(() => {
+    void (async () => {
+      [prefs, packs, reminders, catalog] = await Promise.all([
+        invoke<CharacterPrefs>("get_character_prefs"),
+        invoke<PackInfo[]>("list_packs"),
+        invoke<Reminder[]>("get_reminders"),
+        invoke<CatalogEntry[]>("list_catalog"),
+      ]);
+    })();
+
+    const unlisten = listen<DownloadProgress>("pack://download-progress", (event) => {
+      downloading = { ...downloading, [event.payload.id]: event.payload.percent };
+    });
+    return () => {
+      void unlisten.then((off) => off());
+    };
   });
+
+  async function downloadCharacter(entry: CatalogEntry) {
+    downloadError = { ...downloadError, [entry.id]: "" };
+    downloading = { ...downloading, [entry.id]: null };
+    try {
+      await invoke<PackInfo>("download_pack", { id: entry.id });
+      // Refresh both lists so the new character appears in the gallery
+      // and drops out of the "available to download" section.
+      [packs, catalog] = await Promise.all([
+        invoke<PackInfo[]>("list_packs"),
+        invoke<CatalogEntry[]>("list_catalog"),
+      ]);
+      selectPack(entry.id);
+    } catch (e) {
+      downloadError = { ...downloadError, [entry.id]: String(e) };
+    } finally {
+      const { [entry.id]: _removed, ...rest } = downloading;
+      downloading = rest;
+    }
+  }
 
   function scheduleSave() {
     if (!prefs) return;
@@ -88,7 +126,9 @@
 </script>
 
 {#snippet characterPreview(pack: PackInfo, scale: number)}
-  {#if pack.manifest.id === "scout"}
+  {#if pack.manifest.id === "mochi"}
+    <MochiCharacter sceneState="idle" {scale} />
+  {:else if pack.manifest.id === "scout"}
     <ScoutCharacter sceneState="idle" {scale} />
   {:else if pack.manifest.renderer === "svg"}
     <SvgCharacter sceneState="idle" theme={prefs?.theme ?? "blue"} {scale} />
@@ -155,6 +195,51 @@
       <p class="error">{importError}</p>
     {/if}
   </section>
+
+  {#if catalog.some((c) => !c.installed)}
+    <section class="section">
+      <h2 class="section-title">More characters</h2>
+      <p class="section-subtitle">
+        Animated characters, downloaded only if you want them — so the app stays small.
+      </p>
+
+      <div class="catalog">
+        {#each catalog.filter((c) => !c.installed) as entry (entry.id)}
+          <div class="catalog-card" class:busy={entry.id in downloading}>
+            <div class="catalog-preview">
+              <img src={entry.preview} alt={entry.name} />
+
+              {#if entry.id in downloading}
+                <div class="catalog-overlay">
+                  <div
+                    class="progress-bar"
+                    class:indeterminate={downloading[entry.id] === null}
+                    style="--pct: {downloading[entry.id] ?? 0}%"
+                  ></div>
+                  <span class="progress-label">
+                    {downloading[entry.id] === null
+                      ? "Starting…"
+                      : `${downloading[entry.id]}%`}
+                  </span>
+                </div>
+              {:else}
+                <button class="catalog-download" onclick={() => downloadCharacter(entry)}>
+                  <span class="download-icon" aria-hidden="true">↓</span>
+                  <span>{entry.sizeMb} MB</span>
+                </button>
+              {/if}
+            </div>
+
+            <span class="catalog-name">{entry.name}</span>
+            <span class="catalog-desc">{entry.description}</span>
+            {#if downloadError[entry.id]}
+              <span class="error">{downloadError[entry.id]}</span>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    </section>
+  {/if}
 
   <div class="two-col">
     <section class="section card pad">
@@ -460,6 +545,137 @@
     color: var(--danger);
     font-size: 0.8rem;
     margin-top: var(--space-2);
+  }
+
+  .catalog {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .catalog-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-3) var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    text-align: center;
+  }
+
+  .catalog-preview {
+    position: relative;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .catalog-preview img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  /* The download control sits over the preview so the character itself
+     is what the eye lands on first. */
+  .catalog-download {
+    position: absolute;
+    inset: auto 0 0 50%;
+    translate: -50% 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0.3rem 0.7rem;
+    border: none;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 650;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 0.1s ease,
+      filter 0.15s ease;
+  }
+  .catalog-download:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+  .catalog-download:active {
+    transform: scale(0.97);
+  }
+
+  .download-icon {
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+
+  .catalog-overlay {
+    position: absolute;
+    inset: auto var(--space-2) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .catalog-card.busy .catalog-preview img {
+    opacity: 0.45;
+  }
+
+  .catalog-name {
+    font-size: 0.82rem;
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .catalog-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  .progress-bar {
+    position: relative;
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--pct, 0%);
+    background: var(--accent);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+  }
+  /* No content-length from the server, so no real percentage to show —
+     sweep a partial bar instead of pretending to know the progress. */
+  .progress-bar.indeterminate::after {
+    width: 35%;
+    animation: progress-sweep 1.1s ease-in-out infinite;
+  }
+  @keyframes progress-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(285%);
+    }
+  }
+
+  .progress-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .pose-list {

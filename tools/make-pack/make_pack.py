@@ -165,7 +165,11 @@ def compute_shared_bbox(all_frame_paths: list[Path]) -> tuple[int, int, int, int
 
 
 def crop_resize_export_webp(
-    frame_paths: list[Path], bbox: tuple[int, int, int, int], target_height: int, out_dir: Path
+    frame_paths: list[Path],
+    bbox: tuple[int, int, int, int],
+    target_height: int,
+    out_dir: Path,
+    quality: int = 80,
 ) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     left, top, right, bottom = bbox
@@ -180,7 +184,7 @@ def crop_resize_export_webp(
             img = img.convert("RGBA").crop(bbox)
             img = img.resize((target_width, target_height), Image.LANCZOS)
             out_path = out_dir / f"{i + 1:04d}.webp"
-            img.save(out_path, "WEBP", quality=80, lossless=False)
+            img.save(out_path, "WEBP", quality=quality, lossless=False)
             out_paths.append(out_path)
     return out_paths
 
@@ -275,6 +279,21 @@ def main() -> int:
     )
     parser.add_argument("--height", type=int, default=420, help="Target height in px (default 420)")
     parser.add_argument("--fps", type=int, default=24, help="Target fps (default 24)")
+    parser.add_argument(
+        "--loop-seconds",
+        type=float,
+        default=4.0,
+        help="How many seconds of the source clip to keep for looping states "
+        "(idle/ask) (default 4). These dominate pack size, and a few seconds "
+        "reads the same once looping.",
+    )
+    parser.add_argument(
+        "--quality",
+        type=int,
+        default=80,
+        help="WebP quality 1-100 (default 80). Lower trades visible fidelity "
+        "for a smaller download.",
+    )
     parser.add_argument(
         "--bg",
         choices=["auto", "colorkey", "rembg", "none"],
@@ -385,6 +404,12 @@ def main() -> int:
         # states (idle/ask) are untouched since any length loops fine.
         MAX_ONESHOT_FRAMES = max(1, round(2.0 * args.fps))
         ONESHOT_STATES = {"happy", "shrug", "sad", "wave"}
+        # Looping states dominate pack size — a 12s source clip gives ~300
+        # frames for idle and another ~300 for ask, which was over 80% of
+        # the total. A few seconds reads the same once it's looping, and
+        # these packs are downloaded over the network, so the saving
+        # matters more than the extra variation.
+        MAX_LOOP_FRAMES = max(1, round(args.loop_seconds * args.fps))
         for state_name, (clip_name, loops) in STATE_DEFAULT_CLIP.items():
             state_dirs[state_name] = clip_name
             if clip_name in exported_dirs:
@@ -396,9 +421,13 @@ def main() -> int:
                 source_frames = source_frames[:MAX_WALK_FRAMES]
             elif state_name in ONESHOT_STATES and len(source_frames) > MAX_ONESHOT_FRAMES:
                 source_frames = source_frames[:MAX_ONESHOT_FRAMES]
+            elif loops and len(source_frames) > MAX_LOOP_FRAMES:
+                source_frames = source_frames[:MAX_LOOP_FRAMES]
 
             out_dir = tmp_path / "pack" / clip_name
-            webp_frames = crop_resize_export_webp(source_frames, bbox, args.height, out_dir)
+            webp_frames = crop_resize_export_webp(
+                source_frames, bbox, args.height, out_dir, args.quality
+            )
             frame_counts[clip_name] = len(webp_frames)
 
             if loops:
@@ -419,9 +448,13 @@ def main() -> int:
     # resources entry, and the app only ever reads zips the user picks
     # via the import dialog — a zip sitting next to the pack folder is
     # pure dead weight that silently doubles each frames pack's cost.
-    zip_dir = out_root.parent.parent / "dist" / "packs"
+    # Anchor on the repo root rather than walking up from --out, so a
+    # custom output path doesn't nest the zip under itself.
+    zip_dir = Path(__file__).resolve().parents[2] / "dist" / "packs"
     zip_dir.mkdir(parents=True, exist_ok=True)
-    zip_path = zip_dir / f"{out_root.name}.zip"
+    # Name by pack id, not the output folder — the id is what the app and
+    # the download catalog key on.
+    zip_path = zip_dir / f"{args.id}.zip"
     zip_pack(out_root, zip_path)
 
     total_bytes = sum(f.stat().st_size for f in out_root.rglob("*") if f.is_file())

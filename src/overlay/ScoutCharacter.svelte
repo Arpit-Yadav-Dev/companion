@@ -1,12 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
-  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import type { SceneState } from "./director";
-
-  interface CursorPositionPayload {
-    x: number;
-    y: number;
-  }
+  import { useCharacterBehaviour } from "./characterBehaviour.svelte";
 
   interface Props {
     sceneState: SceneState;
@@ -21,81 +15,18 @@
   let { sceneState, prop = null, scale = 1, mirrored = false }: Props = $props();
 
   let rootEl: HTMLDivElement | undefined = $state();
-  let pupilOffset = $state({ x: 0, y: 0 });
 
-  function onCursorPosition(pos: CursorPositionPayload) {
-    if (!rootEl) return;
-    const rect = rootEl.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height * 0.3;
-    const dx = (pos.x - cx) * (mirrored ? -1 : 1);
-    const dy = pos.y - cy;
-    const dist = Math.hypot(dx, dy) || 1;
-    const maxOffset = 3;
-    pupilOffset = {
-      x: (dx / dist) * Math.min(maxOffset, dist / 40),
-      y: (dy / dist) * Math.min(maxOffset, dist / 40),
-    };
-  }
-
-  let blinking = $state(false);
-  let blinkTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function scheduleBlink() {
-    const delay = 2200 + Math.random() * 3800;
-    blinkTimer = setTimeout(async () => {
-      blinking = true;
-      await new Promise((r) => setTimeout(r, 120));
-      blinking = false;
-      scheduleBlink();
-    }, delay);
-  }
-
-  // Procedural idle variety: every few seconds, while idle, play one small
-  // random gesture (head-tilt / sniff-the-ground / tail-chase) so standing
-  // still never reads as a static looping GIF. Only one plays at a time and
-  // it fully resets before the next is picked.
-  type IdleGesture = "none" | "tilt" | "sniff" | "tail-chase";
-  let idleGesture = $state<IdleGesture>("none");
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function scheduleIdleGesture() {
-    const delay = 3200 + Math.random() * 4600;
-    idleTimer = setTimeout(() => {
-      if (sceneState === "idle") {
-        const options: IdleGesture[] = ["tilt", "sniff", "tail-chase"];
-        idleGesture = options[Math.floor(Math.random() * options.length)];
-        const duration = idleGesture === "tail-chase" ? 1400 : 1000;
-        setTimeout(() => {
-          idleGesture = "none";
-        }, duration);
-      }
-      scheduleIdleGesture();
-    }, delay);
-  }
-
-  let unlistenCursor: (() => void) | undefined;
-
-  onMount(() => {
-    const webview = getCurrentWebviewWindow();
-    webview
-      .listen<CursorPositionPayload>("overlay://cursor", (event) =>
-        onCursorPosition(event.payload),
-      )
-      .then((unlisten) => {
-        unlistenCursor = unlisten;
-      });
-    scheduleBlink();
-    scheduleIdleGesture();
+  const behaviour = useCharacterBehaviour({
+    sceneState: () => sceneState,
+    mirrored: () => mirrored,
+    rootEl: () => rootEl,
+    idleGestures: ["tilt", "sniff", "tail-chase"],
   });
 
-  onDestroy(() => {
-    unlistenCursor?.();
-    if (blinkTimer) clearTimeout(blinkTimer);
-    if (idleTimer) clearTimeout(idleTimer);
-  });
-
-  let eyesClosed = $derived(blinking || sceneState === "sad");
+  let pupilOffset = $derived(behaviour.pupilOffset);
+  let eyesClosed = $derived(behaviour.eyesClosed);
+  let idleGesture = $derived(behaviour.idleGesture);
+  let isWalking = $derived(behaviour.isWalking);
 
   const MOUTH_PATHS: Partial<Record<SceneState, string>> = {
     happy: "M 76 148 Q 100 174 124 148",
@@ -103,8 +34,6 @@
     sad: "M 84 154 Q 100 147 116 154",
   };
   let mouthPath = $derived(MOUTH_PATHS[sceneState] ?? "M 84 148 Q 100 157 116 148");
-
-  let isWalking = $derived(sceneState === "walk_in" || sceneState === "walk_out");
 </script>
 
 <div
