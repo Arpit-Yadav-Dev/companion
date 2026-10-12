@@ -17,18 +17,13 @@
     sceneState: () => sceneState,
     mirrored: () => mirrored,
     rootEl: () => rootEl,
-    idleGestures: ["scan", "pulse", "analyse"],
-    eyeHeightRatio: 0.45,
-    maxPupilOffset: 7,
+    idleGestures: ["powercheck", "headturn", "repulsor"],
+    eyeHeightRatio: 0.3,
+    maxPupilOffset: 2,
   });
 
   let pupilOffset = $derived(behaviour.pupilOffset);
   let idleGesture = $derived(behaviour.idleGesture);
-
-  // Ticks around the outer ring — generated so the spacing is exact.
-  const TICKS = Array.from({ length: 24 }, (_, i) => i * 15);
-  // Equaliser bars that react to each state.
-  const BARS = [0, 1, 2, 3, 4, 5, 6];
 </script>
 
 <div
@@ -38,86 +33,134 @@
 >
   <svg class="body-svg" viewBox="0 0 200 215" width="150" height="161" aria-hidden="true">
     <defs>
-      <radialGradient id="aura-core" cx="50%" cy="50%" r="50%">
+      <linearGradient id="aura-red" x1="20%" y1="0%" x2="80%" y2="100%">
+        <stop offset="0%" stop-color="var(--red-light)" />
+        <stop offset="55%" stop-color="var(--red)" />
+        <stop offset="100%" stop-color="var(--red-dark)" />
+      </linearGradient>
+      <linearGradient id="aura-gold" x1="20%" y1="0%" x2="80%" y2="100%">
+        <stop offset="0%" stop-color="var(--gold-light)" />
+        <stop offset="55%" stop-color="var(--gold)" />
+        <stop offset="100%" stop-color="var(--gold-dark)" />
+      </linearGradient>
+      <radialGradient id="aura-reactor" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="#ffffff" />
-        <stop offset="35%" stop-color="var(--glow-bright)" />
-        <stop offset="100%" stop-color="var(--glow)" />
-      </radialGradient>
-      <radialGradient id="aura-halo" cx="50%" cy="50%" r="50%">
-        <stop offset="60%" stop-color="transparent" />
-        <stop offset="100%" stop-color="var(--glow-soft)" />
+        <stop offset="40%" stop-color="var(--arc-bright)" />
+        <stop offset="100%" stop-color="var(--arc)" />
       </radialGradient>
     </defs>
 
-    <!-- A projection casts light, not shadow. -->
-    <ellipse class="ground-glow" cx="100" cy="198" rx="44" ry="8" />
+    <ellipse class="ground-shadow" cx="100" cy="202" rx="42" ry="7" />
 
-    <!-- Projector base: the only solid object, implying it's beamed up -->
-    <g class="emitter">
-      <ellipse class="emitter-top" cx="100" cy="186" rx="26" ry="7" />
-      <path class="emitter-body" d="M 76 186 L 124 186 L 118 198 L 82 198 Z" />
-      <ellipse class="emitter-lens" cx="100" cy="186" rx="15" ry="4" />
+    <!-- Boot thrusters, flaring during flight -->
+    <g class="thruster thruster-left">
+      <path class="flame" d="M 80 196 Q 74 212 80 220 Q 86 212 80 196 Z" />
+    </g>
+    <g class="thruster thruster-right">
+      <path class="flame" d="M 120 196 Q 114 212 120 220 Q 126 212 120 196 Z" />
     </g>
 
-    <!-- The projected beam, widening toward the hologram -->
-    <path class="beam" d="M 86 184 L 114 184 L 150 92 L 50 92 Z" />
-
-    <g class="holo-group">
-      <circle class="halo" cx="100" cy="108" r="62" />
-
-      <!-- Outer ring, ticking round like a scanner -->
-      <g class="ring ring-outer">
-        <circle class="ring-line" cx="100" cy="108" r="54" />
-        {#each TICKS as angle (angle)}
-          <line
-            class="tick"
-            x1="100"
-            y1="48"
-            x2="100"
-            y2="56"
-            style="--a: {angle}deg"
-          />
-        {/each}
-      </g>
-
-      <!-- Mid ring, counter-rotating with an open arc -->
-      <g class="ring ring-mid">
-        <path class="arc" d="M 58 108 A 42 42 0 0 1 142 108" />
-        <path class="arc" d="M 142 108 A 42 42 0 0 1 58 108" opacity="0.35" />
-      </g>
-
-      <!-- Inner ring, following the cursor like a gaze -->
-      <g
-        class="ring ring-inner"
-        style="transform: translate({pupilOffset.x}px, {pupilOffset.y}px)"
-      >
-        <circle class="ring-line bright" cx="100" cy="108" r="28" />
-        <circle class="core" cx="100" cy="108" r="16" />
-        <circle class="core-dot" cx="100" cy="108" r="6" />
-      </g>
-
-      <!-- Waveform bars: the closest thing it has to an expression -->
-      <g class="bars">
-        {#each BARS as i (i)}
-          <rect class="bar" x={76 + i * 8} y="142" width="4" height="12" rx="2" style="--i: {i}" />
-        {/each}
-      </g>
-
-      {#if prop === "lookfar"}
-        <!-- A distant target lock, far off to one side -->
-        <g class="prop-lock">
-          <rect x="146" y="76" width="26" height="26" rx="3" />
-          <line x1="159" y1="70" x2="159" y2="80" />
-          <line x1="159" y1="98" x2="159" y2="108" />
-        </g>
-      {:else if prop !== "stretch" && prop !== "posture"}
-        <!-- A hydration readout rather than a physical object -->
-        <g class="prop-readout">
-          <rect x="142" y="130" width="34" height="22" rx="4" />
-          <path class="readout-wave" d="M 147 143 L 152 137 L 157 146 L 162 135 L 167 142 L 172 139" />
-        </g>
-      {/if}
+    <!-- Legs: gold shin plating over red thighs -->
+    <g class="leg leg-left">
+      <path class="plate-red" d="M 84 152 L 98 152 L 96 176 L 84 176 Z" />
+      <path class="plate-gold" d="M 84 176 L 96 176 L 95 194 L 83 194 Z" />
+      <path class="boot" d="M 80 192 L 98 192 L 100 200 L 78 200 Z" />
     </g>
+    <g class="leg leg-right">
+      <path class="plate-red" d="M 102 152 L 116 152 L 116 176 L 104 176 Z" />
+      <path class="plate-gold" d="M 104 176 L 116 176 L 117 194 L 105 194 Z" />
+      <path class="boot" d="M 102 192 L 120 192 L 122 200 L 100 200 Z" />
+    </g>
+
+    <g class="torso-group">
+      <!-- Armoured chest: wide pauldrons tapering to the waist -->
+      <path
+        class="plate-red chest"
+        d="M 100 86
+           L 134 94
+           Q 142 100 140 118
+           L 134 146
+           Q 100 156 66 146
+           L 60 118
+           Q 58 100 66 94 Z"
+      />
+      <!-- Gold ab plating, segmented -->
+      <path class="plate-gold" d="M 76 136 L 124 136 L 120 150 Q 100 156 80 150 Z" />
+      <path class="seam" d="M 78 142 L 122 142" />
+
+      <!-- The arc reactor: the single most recognisable detail -->
+      <g class="reactor">
+        <circle class="reactor-housing" cx="100" cy="112" r="17" />
+        <circle class="reactor-ring" cx="100" cy="112" r="12" />
+        <circle class="reactor-core" cx="100" cy="112" r="8" />
+        <circle class="reactor-hot" cx="100" cy="112" r="4" />
+      </g>
+
+      <!-- Shoulder pauldrons, overlapping the arms -->
+      <path class="plate-gold pauldron" d="M 56 92 Q 46 98 48 114 L 66 118 Q 70 100 66 92 Z" />
+      <path class="plate-gold pauldron" d="M 144 92 Q 154 98 152 114 L 134 118 Q 130 100 134 92 Z" />
+
+      <!-- Arms with repulsor palms -->
+      <g class="arm arm-left">
+        <path class="plate-red" d="M 46 114 L 62 118 L 58 148 L 44 144 Z" />
+        <path class="plate-gold" d="M 44 144 L 58 148 L 56 164 L 42 160 Z" />
+        <circle class="repulsor" cx="49" cy="166" r="8" />
+      </g>
+      <g class="arm arm-right">
+        <path class="plate-red" d="M 154 114 L 138 118 L 142 148 L 156 144 Z" />
+        <path class="plate-gold" d="M 156 144 L 142 148 L 144 164 L 158 160 Z" />
+        <circle class="repulsor" cx="151" cy="166" r="8" />
+      </g>
+    </g>
+
+    <g class="head-group">
+      <!-- Helmet: red shell with the gold faceplate inset -->
+      <path
+        class="plate-red helmet"
+        d="M 100 30
+           Q 128 30 132 54
+           L 132 72
+           Q 126 86 100 88
+           Q 74 86 68 72
+           L 68 54
+           Q 72 30 100 30 Z"
+      />
+      <path
+        class="plate-gold faceplate"
+        d="M 100 42
+           Q 120 42 123 58
+           L 122 72
+           Q 116 82 100 83
+           Q 84 82 78 72
+           L 77 58
+           Q 80 42 100 42 Z"
+      />
+      <!-- Cheek vents and jaw seam -->
+      <path class="seam" d="M 82 70 L 90 70 M 110 70 L 118 70" />
+      <path class="seam" d="M 86 78 Q 100 84 114 78" />
+
+      <!-- The glowing slit eyes, angled inward -->
+      <g class="eyes" style="transform: translate({pupilOffset.x}px, {pupilOffset.y}px)">
+        <path class="eye-slit" d="M 82 58 L 95 55 L 95 63 L 82 65 Z" />
+        <path class="eye-slit" d="M 118 58 L 105 55 L 105 63 L 118 65 Z" />
+      </g>
+    </g>
+
+    {#if prop === "lookfar"}
+      <!-- HUD target lock projected out to the side -->
+      <g class="prop-hud">
+        <rect x="144" y="54" width="30" height="30" rx="2" />
+        <line x1="159" y1="48" x2="159" y2="58" />
+        <line x1="159" y1="80" x2="159" y2="90" />
+        <circle cx="159" cy="69" r="5" />
+      </g>
+    {:else if prop !== "stretch" && prop !== "posture"}
+      <!-- Status readout panel, in the suit's own HUD style -->
+      <g class="prop-hud">
+        <rect x="142" y="120" width="36" height="24" rx="2" />
+        <path class="hud-wave" d="M 147 134 L 152 127 L 157 138 L 162 125 L 167 133 L 173 130" />
+      </g>
+    {/if}
 
     <g class="sparkles">
       <path class="sparkle s1" d="M0 -8 L2 -2 L8 0 L2 2 L0 8 L-2 2 L-8 0 L-2 -2 Z" />
@@ -129,11 +172,16 @@
 <style>
   .aura {
     --scale: 1;
-    --glow: #2fa8ff;
-    --glow-bright: #7fd4ff;
-    --glow-soft: rgba(47, 168, 255, 0.18);
-    --emitter: #39465a;
-    --emitter-dark: #222b38;
+    /* Hot red and polished gold — the palette is most of the read. */
+    --red-light: #e8453c;
+    --red: #b4201c;
+    --red-dark: #76100f;
+    --gold-light: #ffe08a;
+    --gold: #e0ac28;
+    --gold-dark: #a77512;
+    --arc: #5fd8ff;
+    --arc-bright: #d6f6ff;
+    --seam: rgba(0, 0, 0, 0.35);
 
     position: relative;
     width: calc(150px * var(--scale));
@@ -148,216 +196,191 @@
     transform-origin: 50% 100%;
   }
 
-  /* Light pooling under the emitter, instead of a cast shadow. */
-  .ground-glow {
-    fill: var(--glow);
-    opacity: 0.22;
-    filter: blur(5px);
+  .ground-shadow {
+    fill: rgba(0, 0, 0, 0.18);
+    filter: blur(1.5px);
   }
 
-  .emitter-top {
-    fill: var(--emitter);
+  .plate-red {
+    fill: url(#aura-red);
+    stroke: var(--red-dark);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
   }
-  .emitter-body {
-    fill: var(--emitter-dark);
+  .plate-gold {
+    fill: url(#aura-gold);
+    stroke: var(--gold-dark);
+    stroke-width: 1.6;
+    stroke-linejoin: round;
   }
-  .emitter-lens {
-    fill: var(--glow-bright);
-    filter: drop-shadow(0 0 4px var(--glow));
+  .boot {
+    fill: url(#aura-gold);
+    stroke: var(--gold-dark);
+    stroke-width: 1.6;
   }
-
-  .beam {
-    fill: var(--glow);
-    opacity: 0.1;
-  }
-
-  .halo {
-    fill: url(#aura-halo);
-    opacity: 0.55;
-  }
-
-  .ring-line {
+  .seam {
     fill: none;
-    stroke: var(--glow);
-    stroke-width: 2;
-    opacity: 0.75;
+    stroke: var(--seam);
+    stroke-width: 1.6;
+    stroke-linecap: round;
   }
-  .ring-line.bright {
-    stroke: var(--glow-bright);
+
+  /* The arc reactor is always lit and always pulsing — it reads as the
+     power source even when nothing else is moving. */
+  .reactor-housing {
+    fill: #2a2a30;
+    stroke: var(--gold-dark);
+    stroke-width: 2;
+  }
+  .reactor-ring {
+    fill: none;
+    stroke: var(--arc);
     stroke-width: 2.5;
-    opacity: 1;
+    opacity: 0.85;
   }
-  .arc {
-    fill: none;
-    stroke: var(--glow-bright);
-    stroke-width: 3;
-    stroke-linecap: round;
+  .reactor-core {
+    fill: url(#aura-reactor);
+    filter: drop-shadow(0 0 6px var(--arc));
   }
-  .tick {
-    stroke: var(--glow);
-    stroke-width: 2;
-    stroke-linecap: round;
-    opacity: 0.7;
-    transform: rotate(var(--a));
-    transform-origin: 100px 108px;
-  }
-
-  .core {
-    fill: url(#aura-core);
-    opacity: 0.9;
-    filter: drop-shadow(0 0 6px var(--glow));
-  }
-  .core-dot {
+  .reactor-hot {
     fill: #ffffff;
   }
+  .reactor {
+    animation: reactor-pulse 2.6s ease-in-out infinite;
+    transform-origin: 100px 112px;
+  }
+  @keyframes reactor-pulse {
+    0%,
+    100% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  }
 
-  /* Rings turn at different speeds and directions — the detail that
-     sells "machine" rather than "decoration". */
-  .ring-outer {
-    transform-origin: 100px 108px;
-    animation: spin-cw 22s linear infinite;
-  }
-  .ring-mid {
-    transform-origin: 100px 108px;
-    animation: spin-ccw 14s linear infinite;
-  }
-  .ring-inner {
+  .eye-slit {
+    fill: var(--arc-bright);
+    filter: drop-shadow(0 0 5px var(--arc));
     transition: transform 120ms ease-out;
   }
-  @keyframes spin-cw {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes spin-ccw {
-    to {
-      transform: rotate(-360deg);
-    }
+  .eyes {
+    transition: transform 120ms ease-out;
   }
 
-  .holo-group {
-    animation: holo-float 3.6s ease-in-out infinite;
-    transform-origin: 100px 108px;
-  }
-  @keyframes holo-float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-5px);
-    }
+  .repulsor {
+    fill: var(--arc-bright);
+    opacity: 0.55;
+    filter: drop-shadow(0 0 3px var(--arc));
   }
 
-  .bar {
-    fill: var(--glow-bright);
-    transform-origin: center bottom;
-    transform-box: fill-box;
-    animation: bar-idle 1.4s ease-in-out infinite;
-    animation-delay: calc(var(--i) * 90ms);
+  .arm-left {
+    transform-origin: 54px 116px;
   }
-  @keyframes bar-idle {
-    0%,
-    100% {
-      transform: scaleY(0.4);
-    }
-    50% {
-      transform: scaleY(1);
-    }
+  .arm-right {
+    transform-origin: 146px 116px;
+  }
+  .leg-left {
+    transform-origin: 91px 152px;
+  }
+  .leg-right {
+    transform-origin: 109px 152px;
   }
 
-  .prop-readout rect,
-  .prop-lock rect {
-    fill: rgba(47, 168, 255, 0.12);
-    stroke: var(--glow);
+  /* Thruster flames stay hidden until flight. */
+  .flame {
+    fill: var(--arc-bright);
+    opacity: 0;
+    filter: drop-shadow(0 0 6px var(--arc));
+    transform-origin: top center;
+  }
+
+  .prop-hud rect {
+    fill: rgba(95, 216, 255, 0.1);
+    stroke: var(--arc);
     stroke-width: 1.5;
   }
-  .readout-wave {
+  .prop-hud line,
+  .prop-hud circle {
     fill: none;
-    stroke: var(--glow-bright);
+    stroke: var(--arc-bright);
+    stroke-width: 1.8;
+  }
+  .hud-wave {
+    fill: none;
+    stroke: var(--arc-bright);
     stroke-width: 2;
     stroke-linecap: round;
-  }
-  .prop-lock line {
-    stroke: var(--glow-bright);
-    stroke-width: 2;
   }
 
   .sparkles {
     opacity: 0;
   }
   .sparkle {
-    fill: var(--glow-bright);
+    fill: var(--gold-light);
   }
   .s1 {
-    transform: translate(40px, 48px);
+    transform: translate(44px, 32px);
   }
   .s2 {
-    transform: translate(162px, 74px);
+    transform: translate(158px, 58px);
   }
 
-  /* --- Materialises rather than walks: rings spin up fast and the
-         whole projection resolves into focus. --- */
-  .state-walk_in .holo-group {
-    animation: boot calc(900ms / var(--anim-speed, 1)) ease-out both;
+  /* --- Flies in on its thrusters rather than walking: legs together,
+         a forward lean, and the flames lit the whole way. --- */
+  .state-walk_in .body-svg,
+  .state-walk_out .body-svg {
+    animation: fly calc(620ms / var(--anim-speed, 1)) ease-in-out infinite;
+    transform-origin: 100px 200px;
   }
-  .state-walk_out .holo-group {
-    animation: shutdown calc(700ms / var(--anim-speed, 1)) ease-in both;
-  }
-  @keyframes boot {
-    0% {
-      opacity: 0;
-      transform: scale(0.3) rotate(-90deg);
-      filter: blur(6px);
+  @keyframes fly {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-3deg);
     }
-    60% {
-      opacity: 1;
-      transform: scale(1.08) rotate(8deg);
-      filter: blur(0);
+    50% {
+      transform: translateY(-11px) rotate(3deg);
+    }
+  }
+  .state-walk_in .flame,
+  .state-walk_out .flame {
+    opacity: 1;
+    animation: flame-flicker 120ms ease-in-out infinite alternate;
+  }
+  @keyframes flame-flicker {
+    0% {
+      transform: scaleY(0.8) scaleX(0.9);
+      opacity: 0.8;
     }
     100% {
+      transform: scaleY(1.3) scaleX(1.05);
       opacity: 1;
-      transform: scale(1) rotate(0deg);
     }
   }
-  @keyframes shutdown {
-    0% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0.2) rotate(60deg);
-      filter: blur(5px);
-    }
+  .state-walk_in .leg-left,
+  .state-walk_out .leg-left {
+    transform: rotate(4deg);
   }
-  .state-walk_in .ring-outer,
-  .state-walk_out .ring-outer {
-    animation: spin-cw calc(1.6s / var(--anim-speed, 1)) linear infinite;
+  .state-walk_in .leg-right,
+  .state-walk_out .leg-right {
+    transform: rotate(-4deg);
   }
-  .state-walk_in .ring-mid,
-  .state-walk_out .ring-mid {
-    animation: spin-ccw calc(1.1s / var(--anim-speed, 1)) linear infinite;
+  .state-walk_in .arm-left,
+  .state-walk_out .arm-left {
+    transform: rotate(12deg);
   }
-  .state-walk_in .beam,
-  .state-walk_out .beam {
-    animation: beam-flicker 180ms steps(2) infinite;
-  }
-  @keyframes beam-flicker {
-    0% {
-      opacity: 0.16;
-    }
-    100% {
-      opacity: 0.07;
-    }
+  .state-walk_in .arm-right,
+  .state-walk_out .arm-right {
+    transform: rotate(-12deg);
   }
 
   /* --- States --- */
-  .state-ask .prop-readout,
-  .state-ask .prop-lock {
-    animation: prop-pulse 1.8s ease-in-out infinite;
+  .state-ask .prop-hud {
+    animation: hud-pulse 1.8s ease-in-out infinite;
   }
-  @keyframes prop-pulse {
+  @keyframes hud-pulse {
     0%,
     100% {
       opacity: 0.75;
@@ -367,44 +390,56 @@
     }
   }
 
-  /* Confirmation: everything flares green and the bars spike */
-  .state-happy {
-    --glow: #35e3a0;
-    --glow-bright: #9bffd8;
-    --glow-soft: rgba(53, 227, 160, 0.22);
+  /* Confirm: repulsors fire, reactor flares, eyes brighten */
+  .state-happy .repulsor {
+    animation: repulsor-fire 420ms ease-out infinite;
   }
-  .state-happy .core {
-    animation: confirm-flare 520ms ease-out;
+  .state-happy .arm-left {
+    animation: repulsor-pose-left 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
-  .state-happy .ring-outer {
-    animation: spin-cw 3s linear infinite;
+  .state-happy .arm-right {
+    animation: repulsor-pose-right 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
-  .state-happy .bar {
-    animation: bar-spike 260ms ease-in-out infinite;
-    animation-delay: calc(var(--i) * 50ms);
+  .state-happy .reactor {
+    animation: reactor-flare 520ms ease-out;
+  }
+  .state-happy .eye-slit {
+    filter: drop-shadow(0 0 10px var(--arc));
   }
   .state-happy .sparkles {
     opacity: 1;
     animation: sparkle-burst 700ms ease-out;
   }
-  @keyframes confirm-flare {
+  @keyframes repulsor-fire {
+    0%,
+    100% {
+      opacity: 0.5;
+      r: 8;
+    }
+    50% {
+      opacity: 1;
+      r: 11;
+    }
+  }
+  @keyframes repulsor-pose-left {
+    to {
+      transform: rotate(38deg) translate(-4px, 6px);
+    }
+  }
+  @keyframes repulsor-pose-right {
+    to {
+      transform: rotate(-38deg) translate(4px, 6px);
+    }
+  }
+  @keyframes reactor-flare {
     0%,
     100% {
       transform: scale(1);
-      filter: drop-shadow(0 0 6px var(--glow));
+      filter: brightness(1);
     }
     45% {
-      transform: scale(1.35);
-      filter: drop-shadow(0 0 16px var(--glow));
-    }
-  }
-  @keyframes bar-spike {
-    0%,
-    100% {
-      transform: scaleY(0.5);
-    }
-    50% {
-      transform: scaleY(2.4);
+      transform: scale(1.3);
+      filter: brightness(1.5);
     }
   }
   @keyframes sparkle-burst {
@@ -422,95 +457,124 @@
     }
   }
 
-  /* Deferred: amber, and the waveform flattens to a holding pattern */
-  .state-shrug {
-    --glow: #ffb13b;
-    --glow-bright: #ffd79a;
-    --glow-soft: rgba(255, 177, 59, 0.2);
+  /* Deferred: a small shrug of the pauldrons, power eased back */
+  .state-shrug .arm-left {
+    transform: rotate(-16deg) translateY(-5px);
   }
-  .state-shrug .bar {
-    animation: none;
-    transform: scaleY(0.45);
+  .state-shrug .arm-right {
+    transform: rotate(16deg) translateY(-5px);
   }
-  .state-shrug .ring-mid {
-    animation: spin-ccw 30s linear infinite;
+  .state-shrug .reactor {
+    animation-duration: 4s;
+    opacity: 0.8;
   }
 
-  /* Ignored: signal degrades, rings slow, the image glitches */
-  .state-sad {
-    --glow: #6b7a8f;
-    --glow-bright: #9aa8ba;
-    --glow-soft: rgba(107, 122, 143, 0.14);
+  /* Ignored: power drops — the reactor dims, eyes gutter, head droops */
+  .state-sad .head-group {
+    transform: translateY(6px) rotate(-4deg);
   }
-  .state-sad .holo-group {
-    animation: signal-loss 2.2s ease-in-out infinite;
+  .state-sad .reactor {
+    animation: reactor-brownout 1.8s ease-in-out infinite;
   }
-  .state-sad .ring-outer {
-    animation: spin-cw 60s linear infinite;
+  .state-sad .eye-slit {
+    opacity: 0.45;
+    filter: none;
+    animation: eye-gutter 2.4s ease-in-out infinite;
   }
-  .state-sad .bar {
-    animation: none;
-    transform: scaleY(0.2);
+  .state-sad .repulsor {
+    opacity: 0.2;
   }
-  .state-sad .beam {
-    opacity: 0.05;
+  .state-sad .arm-left,
+  .state-sad .arm-right {
+    transform: translateY(5px);
   }
-  @keyframes signal-loss {
+  @keyframes reactor-brownout {
     0%,
     100% {
-      opacity: 0.8;
-      transform: translateY(2px) skewX(0deg);
-    }
-    48% {
-      opacity: 0.55;
-      transform: translateY(2px) skewX(2deg);
-    }
-    52% {
-      opacity: 0.9;
-      transform: translateY(2px) skewX(-2deg);
-    }
-  }
-
-  /* No limbs to wave, so the rings tip toward you instead */
-  .state-wave .holo-group {
-    animation: holo-nod 460ms ease-in-out 3;
-  }
-  @keyframes holo-nod {
-    0%,
-    100% {
-      transform: rotate(0deg) scale(1);
+      opacity: 0.45;
     }
     50% {
-      transform: rotate(-12deg) scale(1.05);
+      opacity: 0.7;
+    }
+  }
+  @keyframes eye-gutter {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    47% {
+      opacity: 0.2;
+    }
+    53% {
+      opacity: 0.6;
+    }
+  }
+
+  .state-wave .arm-right {
+    animation: wave 520ms ease-in-out 3;
+  }
+  @keyframes wave {
+    0%,
+    100% {
+      transform: rotate(-104deg) translate(6px, 12px);
+    }
+    50% {
+      transform: rotate(-132deg) translate(6px, 12px);
     }
   }
 
   /* --- Idle gestures --- */
-  /* A scan line sweeps the rings */
-  .gesture-scan.state-idle .ring-mid {
-    animation: spin-ccw 1.4s linear 2;
+  .head-group {
+    transform-origin: 100px 88px;
   }
-  .gesture-scan.state-idle .core {
-    animation: confirm-flare 1400ms ease-in-out;
+  /* Systems check: reactor and eyes surge together */
+  .gesture-powercheck.state-idle .reactor {
+    animation: reactor-flare 900ms ease-in-out;
   }
-
-  .gesture-pulse.state-idle .halo {
-    animation: halo-pulse 700ms ease-in-out 2;
+  .gesture-powercheck.state-idle .eye-slit {
+    animation: eye-surge 900ms ease-in-out;
   }
-  @keyframes halo-pulse {
+  @keyframes eye-surge {
     0%,
     100% {
-      opacity: 0.55;
-      transform: scale(1);
+      filter: drop-shadow(0 0 5px var(--arc));
     }
     50% {
-      opacity: 0.85;
-      transform: scale(1.1);
+      filter: drop-shadow(0 0 14px var(--arc));
     }
   }
 
-  .gesture-analyse.state-idle .bar {
-    animation: bar-spike 200ms ease-in-out 6;
-    animation-delay: calc(var(--i) * 40ms);
+  .gesture-headturn.state-idle .head-group {
+    animation: headturn 1500ms ease-in-out;
+  }
+  @keyframes headturn {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    30% {
+      transform: rotate(-10deg);
+    }
+    70% {
+      transform: rotate(10deg);
+    }
+  }
+
+  /* Charges one palm, then lets it fade */
+  .gesture-repulsor.state-idle .arm-right {
+    animation: charge-arm 1500ms ease-in-out;
+  }
+  .gesture-repulsor.state-idle .repulsor {
+    animation: repulsor-fire 500ms ease-out 3;
+  }
+  @keyframes charge-arm {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    35%,
+    70% {
+      transform: rotate(-54deg) translate(4px, 8px);
+    }
   }
 </style>

@@ -130,8 +130,15 @@ def non_transparent_bbox(image: Image.Image) -> tuple[int, int, int, int] | None
     """Returns (left, top, right, bottom) of the non-transparent pixel
     extent, or None if the frame is fully transparent."""
     alpha = np.array(image.split()[-1])
-    rows = np.any(alpha > 10, axis=1)
-    cols = np.any(alpha > 10, axis=0)
+    # A chroma key almost always leaves a scatter of faint pixels across the
+    # plate. Testing "any pixel above 10" lets a handful of those stray pixels
+    # pin the box to the full frame, so the character ends up tiny inside a
+    # mostly-empty crop. Require a row/column to carry a real slice of the
+    # subject instead: solidly opaque pixels, and more than a couple of them.
+    solid = alpha > 128
+    min_run = max(2, int(0.004 * max(alpha.shape)))
+    rows = solid.sum(axis=1) >= min_run
+    cols = solid.sum(axis=0) >= min_run
     if not rows.any() or not cols.any():
         return None
     top, bottom = np.where(rows)[0][[0, -1]]
