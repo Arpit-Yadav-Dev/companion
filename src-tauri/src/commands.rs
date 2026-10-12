@@ -23,6 +23,10 @@ pub struct ReminderShowPayload {
     pub yes_label: String,
     pub later_label: String,
     pub snooze_min: u32,
+    /// Which reminder-specific pose/prop a character should use for its
+    /// "ask" state, e.g. "bottle" | "stretch" | "lookfar" | "posture".
+    /// None falls back to the character's generic ask pose.
+    pub prop: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -10,6 +10,10 @@ export interface ReminderShowPayload {
   yesLabel: string;
   laterLabel: string;
   snoozeMin: number;
+  /** Which reminder-specific pose a character should use for its "ask"
+   * state, e.g. "bottle" | "stretch" | "lookfar" | "posture". Undefined
+   * falls back to the character's generic ask pose. */
+  prop?: string | null;
 }
 
 export interface ReminderResponsePayload {
@@ -86,6 +90,8 @@ export interface CharacterPrefs {
   sizePercent: number;
   entranceSide: EntranceSidePref;
   position: PositionPref;
+  /** Scales walk/leg/gesture animation speed; 100 = normal. */
+  animationSpeedPercent: number;
 }
 
 export interface StatsSnapshot {

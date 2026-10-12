@@ -35,6 +35,12 @@ pub struct CharacterPrefs {
     pub size_percent: u32,
     pub entrance_side: String, // "left" | "right" | "random"
     pub position: String,     // "bottom_left" | "bottom_right" | "bottom_center"
+    #[serde(default = "default_animation_speed_percent")]
+    pub animation_speed_percent: u32, // scales walk/leg/gesture animation speed; 100 = normal
+}
+
+fn default_animation_speed_percent() -> u32 {
+    100
 }
 
 fn default_general() -> GeneralPrefs {
@@ -56,6 +62,7 @@ fn default_character() -> CharacterPrefs {
         size_percent: 100,
         entrance_side: "random".into(),
         position: "bottom_left".into(),
+        animation_speed_percent: 100,
     }
 }
 

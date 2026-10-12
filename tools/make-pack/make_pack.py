@@ -69,7 +69,14 @@ def run_ffmpeg(args: list[str]) -> None:
 
 
 def extract_frames(
-    clip_path: Path, out_dir: Path, fps: int, bg_mode: str, colorkey_hex: str, despill_type: str
+    clip_path: Path,
+    out_dir: Path,
+    fps: int,
+    bg_mode: str,
+    colorkey_hex: str,
+    despill_type: str,
+    colorkey_similarity: float = 0.20,
+    colorkey_blend: float = 0.08,
 ) -> list[Path]:
     """Extracts frames at the target fps, applying chroma-key removal
     during extraction when bg_mode is "auto" or "colorkey". Frames land as
@@ -80,10 +87,13 @@ def extract_frames(
 
     vf_parts = [f"fps={fps}"]
     if bg_mode in ("auto", "colorkey"):
-        # A generous similarity/blend so slightly uneven studio lighting
-        # on the screen still keys out cleanly; despill removes the
-        # colour fringe chroma-key leaves on hair/edges.
-        vf_parts.append(f"colorkey={colorkey_hex}:0.35:0.15")
+        # similarity/blend default tight enough that light-coloured
+        # subjects (e.g. a pale dog on a pale-blue screen) don't get
+        # partially keyed out themselves — a wide net (e.g. 0.35) picks up
+        # the subject's own near-background tones and leaves them
+        # semi-transparent instead of solid. Widen via --colorkey-similarity
+        # only if the actual background doesn't key out cleanly.
+        vf_parts.append(f"colorkey={colorkey_hex}:{colorkey_similarity}:{colorkey_blend}")
         vf_parts.append(f"despill=type={despill_type}")
     run_ffmpeg([
         "-i", str(clip_path),
@@ -205,7 +215,13 @@ def detect_loop_seam(frame_paths: list[Path]) -> int:
 
 
 def build_pack_json(
-    pack_id: str, name: str, fps: int, height: int, states: dict[str, str]
+    pack_id: str,
+    name: str,
+    fps: int,
+    height: int,
+    states: dict[str, str],
+    frame_counts: dict[str, int],
+    frame_width: int,
 ) -> dict:
     return {
         "id": pack_id,
@@ -213,12 +229,14 @@ def build_pack_json(
         "renderer": "frames",
         "fps": fps,
         "heightPx": height,
+        "widthPx": frame_width,
         "anchor": {"x": 0.5, "y": 1.0},
         "bubbleOffset": {"x": 0, "y": -0.95},
         "states": {
             state_name: {
                 "dir": dir_name,
                 "loop": STATE_DEFAULT_CLIP[state_name][1],
+                "frameCount": frame_counts[dir_name],
                 **(
                     {"move": "enter"}
                     if state_name == "walk_in"
@@ -279,6 +297,20 @@ def main() -> int:
         help="Which colour fringe to remove from edges after keying (default: green). "
         "Set to blue when --colorkey-hex is a blue screen.",
     )
+    parser.add_argument(
+        "--colorkey-similarity",
+        type=float,
+        default=0.20,
+        help="How close a pixel must be to --colorkey-hex to be keyed out (0-1, default "
+        "0.20). Lower this if a light-coloured subject is coming out semi-transparent; "
+        "raise it if background colour is still visible at the edges.",
+    )
+    parser.add_argument(
+        "--colorkey-blend",
+        type=float,
+        default=0.08,
+        help="Softness of the chroma-key edge falloff (0-1, default 0.08).",
+    )
     parser.add_argument("--out", default=None, help="Output directory (default: ./packs/<id>)")
     args = parser.parse_args()
 
@@ -315,7 +347,14 @@ def main() -> int:
         for clip_name, clip_path in clip_paths.items():
             raw_dir = tmp_path / "raw" / clip_name
             frames = extract_frames(
-                clip_path, raw_dir, args.fps, args.bg, args.colorkey_hex, args.despill
+                clip_path,
+                raw_dir,
+                args.fps,
+                args.bg,
+                args.colorkey_hex,
+                args.despill,
+                args.colorkey_similarity,
+                args.colorkey_blend,
             )
             if args.bg == "rembg":
                 remove_background_rembg(frames)
@@ -330,29 +369,59 @@ def main() -> int:
         print(f"Cropping, resizing to {args.height}px, exporting WebP...")
         state_dirs: dict[str, str] = {}
         exported_dirs: set[str] = set()
+        frame_counts: dict[str, int] = {}
+        frame_width = max(1, round((bbox[2] - bbox[0]) * (args.height / (bbox[3] - bbox[1]))))
+        # A walk-in/out should finish in about as long as the director's
+        # fixed WALK_MS entrance animation (~1.2s) — reusing a long clip
+        # (e.g. 12s of dancing) for "walk" means the CSS slide-in finishes
+        # long before the frames do, so the character seems to pop into
+        # place instead of walking in. Cap walk-family clips; other states
+        # (idle/ask/etc.) can stay long since they loop or play once at
+        # their own pace.
+        MAX_WALK_FRAMES = max(1, round(1.2 * args.fps))
+        # One-shot reaction states (happy/shrug/sad/wave) play once and
+        # move on — capping them to ~2s keeps a reused/long source clip
+        # from making every reaction feel like a long pause. Looping
+        # states (idle/ask) are untouched since any length loops fine.
+        MAX_ONESHOT_FRAMES = max(1, round(2.0 * args.fps))
+        ONESHOT_STATES = {"happy", "shrug", "sad", "wave"}
         for state_name, (clip_name, loops) in STATE_DEFAULT_CLIP.items():
             state_dirs[state_name] = clip_name
             if clip_name in exported_dirs:
                 continue  # already exported (e.g. "walk" feeds two states)
             exported_dirs.add(clip_name)
 
+            source_frames = clips_by_name[clip_name].frame_paths
+            if clip_name == "walk" and len(source_frames) > MAX_WALK_FRAMES:
+                source_frames = source_frames[:MAX_WALK_FRAMES]
+            elif state_name in ONESHOT_STATES and len(source_frames) > MAX_ONESHOT_FRAMES:
+                source_frames = source_frames[:MAX_ONESHOT_FRAMES]
+
             out_dir = tmp_path / "pack" / clip_name
-            webp_frames = crop_resize_export_webp(
-                clips_by_name[clip_name].frame_paths, bbox, args.height, out_dir
-            )
+            webp_frames = crop_resize_export_webp(source_frames, bbox, args.height, out_dir)
+            frame_counts[clip_name] = len(webp_frames)
 
             if loops:
                 seam = detect_loop_seam(webp_frames)
                 print(f"  {clip_name}: loop seam near frame {seam + 1}/{len(webp_frames)}")
 
-        manifest = build_pack_json(args.id, args.name, args.fps, args.height, state_dirs)
+        manifest = build_pack_json(
+            args.id, args.name, args.fps, args.height, state_dirs, frame_counts, frame_width
+        )
         pack_dir = tmp_path / "pack"
         (pack_dir / "pack.json").write_text(json.dumps(manifest, indent=2))
 
         out_root.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(pack_dir, out_root)
 
-    zip_path = out_root.with_suffix(".zip")
+    # Write the shareable .zip outside the pack directory. Anything left
+    # inside packs/ gets bundled into the app by tauri.conf.json's
+    # resources entry, and the app only ever reads zips the user picks
+    # via the import dialog — a zip sitting next to the pack folder is
+    # pure dead weight that silently doubles each frames pack's cost.
+    zip_dir = out_root.parent.parent / "dist" / "packs"
+    zip_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = zip_dir / f"{out_root.name}.zip"
     zip_pack(out_root, zip_path)
 
     total_bytes = sum(f.stat().st_size for f in out_root.rglob("*") if f.is_file())

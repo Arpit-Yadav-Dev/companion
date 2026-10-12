@@ -5,14 +5,11 @@
   import type { HitRect, ReminderShowPayload } from "../shared/types";
   import { Director, type SceneState, type EntranceSide } from "./director";
   import SvgCharacter from "./SvgCharacter.svelte";
-  import PixelCharacter from "./PixelCharacter.svelte";
-  import BiscuitCharacter from "./BiscuitCharacter.svelte";
-  import SproutCharacter from "./SproutCharacter.svelte";
-  import SunnyCharacter from "./SunnyCharacter.svelte";
-  import MarshmallowCharacter from "./MarshmallowCharacter.svelte";
+  import ScoutCharacter from "./ScoutCharacter.svelte";
   import FramesCharacter from "./FramesCharacter.svelte";
   import Bubble from "./Bubble.svelte";
   import Confetti from "./Confetti.svelte";
+  import Ribbons from "./Ribbons.svelte";
   import type { CharacterPrefs, GeneralPrefs, PackInfo } from "../shared/types";
 
   let sceneState = $state<SceneState>("hidden");
@@ -22,6 +19,8 @@
   let yesLabel = $state("YES");
   let laterLabel = $state("Remind me later");
   let showConfetti = $state(false);
+  let showRibbons = $state(false);
+  let activeProp = $state<string | null>(null);
 
   let characterEl: HTMLDivElement | undefined = $state();
   let bubbleEl: HTMLDivElement | undefined = $state();
@@ -35,9 +34,14 @@
     onLineChange: (l) => (line = l),
     onButtonsVisibleChange: (v) => (buttonsVisible = v),
     onEntranceSideChange: (s) => (entranceSide = s),
+    onPropChange: (p) => (activeProp = p),
     onGoalReached: () => {
       showConfetti = true;
       setTimeout(() => (showConfetti = false), 1600);
+    },
+    onYesCelebrate: () => {
+      showRibbons = true;
+      setTimeout(() => (showRibbons = false), 900);
     },
   });
 
@@ -111,6 +115,7 @@
         const prefersReducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         director.setReducedMotion(generalPrefs.reducedMotion || prefersReducedMotionMedia);
         director.setSoundPrefs({ enabled: generalPrefs.soundEnabled, volume: generalPrefs.soundVolume });
+        director.setAnimationSpeedPercent(characterPrefs.animationSpeedPercent ?? 100);
 
         // Show the window first — requestAnimationFrame never fires on a
         // hidden window in WKWebView, so anything waiting on a frame
@@ -152,6 +157,7 @@
     <div
       class="scene side-{entranceSide} pos-{(characterPrefs?.position ?? 'bottom_left').replace('_', '-')}"
       class:reduced-motion={generalPrefs?.reducedMotion}
+      style="--walk-ms: {1200 / (Math.max(characterPrefs?.animationSpeedPercent ?? 100, 10) / 100)}ms; --anim-speed: {(characterPrefs?.animationSpeedPercent ?? 100) / 100}; --char-scale: {(characterPrefs?.sizePercent ?? 100) / 100};"
     >
       <div class="bubble-wrap" bind:this={bubbleEl}>
         {#if line}
@@ -177,6 +183,9 @@
         {#if showConfetti}
           <Confetti />
         {/if}
+        {#if showRibbons}
+          <Ribbons />
+        {/if}
         {#if activeFramesPack}
           <FramesCharacter
             {sceneState}
@@ -185,33 +194,10 @@
             mirrored={entranceSide === "right"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}
           />
-        {:else if characterPrefs?.activePackId === "pixel"}
-          <PixelCharacter
+        {:else if characterPrefs?.activePackId === "scout"}
+          <ScoutCharacter
             {sceneState}
-            mirrored={entranceSide === "right"}
-            scale={(characterPrefs?.sizePercent ?? 100) / 100}
-          />
-        {:else if characterPrefs?.activePackId === "biscuit"}
-          <BiscuitCharacter
-            {sceneState}
-            mirrored={entranceSide === "right"}
-            scale={(characterPrefs?.sizePercent ?? 100) / 100}
-          />
-        {:else if characterPrefs?.activePackId === "sprout"}
-          <SproutCharacter
-            {sceneState}
-            mirrored={entranceSide === "right"}
-            scale={(characterPrefs?.sizePercent ?? 100) / 100}
-          />
-        {:else if characterPrefs?.activePackId === "sunny"}
-          <SunnyCharacter
-            {sceneState}
-            mirrored={entranceSide === "right"}
-            scale={(characterPrefs?.sizePercent ?? 100) / 100}
-          />
-        {:else if characterPrefs?.activePackId === "marshmallow"}
-          <MarshmallowCharacter
-            {sceneState}
+            prop={activeProp}
             mirrored={entranceSide === "right"}
             scale={(characterPrefs?.sizePercent ?? 100) / 100}
           />
@@ -248,7 +234,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    /* Characters are scaled via CSS transform (growing upward from their
+       feet), which doesn't affect flex layout sizing — so a bigger
+       character can visually grow into the bubble/buttons above it even
+       though the gap between them hasn't changed. Every built-in
+       character's native height is roughly 150-190px; at the maximum
+       140% size slider that's up to ~265px tall, so the gap needs to
+       reserve close to that much room at full scale rather than a small
+       flat bump, or the overlap just reappears at higher sizePercent. */
+    gap: calc(0.5rem + 11rem * max(var(--char-scale, 1) - 1, 0));
   }
 
   .scene.pos-bottom-left {
@@ -278,16 +272,16 @@
   }
 
   .side-left .character-wrap.state-walk_in {
-    animation: slide-in-from-left 1.2s ease-out both;
+    animation: slide-in-from-left var(--walk-ms, 1200ms) ease-out both;
   }
   .side-left .character-wrap.state-walk_out {
-    animation: slide-out-to-left 1.2s ease-in both;
+    animation: slide-out-to-left var(--walk-ms, 1200ms) ease-in both;
   }
   .side-right .character-wrap.state-walk_in {
-    animation: slide-in-from-right 1.2s ease-out both;
+    animation: slide-in-from-right var(--walk-ms, 1200ms) ease-out both;
   }
   .side-right .character-wrap.state-walk_out {
-    animation: slide-out-to-right 1.2s ease-in both;
+    animation: slide-out-to-right var(--walk-ms, 1200ms) ease-in both;
   }
 
   .side-right .character-wrap {

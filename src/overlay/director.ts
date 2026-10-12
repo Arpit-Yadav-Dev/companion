@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ReminderChoice, ReminderShowPayload, DailyStats } from "../shared/types";
-import { playEntryPop, playYesDing } from "./sound";
+import { playEntryPop, playYesDing, playLaterShrug, playGoalReached } from "./sound";
 
 export type SceneState =
   | "hidden"
@@ -26,6 +26,13 @@ export interface DirectorCallbacks {
   onButtonsVisibleChange: (visible: boolean) => void;
   onEntranceSideChange: (side: EntranceSide) => void;
   onGoalReached: () => void;
+  /** Fires on every plain YES (not the bigger goal-reached moment, which
+   * has its own separate confetti) — a small celebratory visual cue. */
+  onYesCelebrate: () => void;
+  /** Which reminder-specific pose the character should use, e.g.
+   * "bottle" | "stretch" | "lookfar" | "posture". null = no override,
+   * character uses its generic ask/happy pose. */
+  onPropChange: (prop: string | null) => void;
 }
 
 const PRAISE_LINES = ["Nice! 💙", "Yesss 💧", "That's the way!", "Hydration hero 💙"];
@@ -49,6 +56,7 @@ export class Director {
   private resolved = false;
   private reducedMotion = false;
   private sound: SoundPrefs = { enabled: false, volume: 0.5 };
+  private animationSpeedPercent = 100;
 
   constructor(private callbacks: DirectorCallbacks) {}
 
@@ -60,18 +68,27 @@ export class Director {
     this.sound = prefs;
   }
 
+  setAnimationSpeedPercent(percent: number) {
+    this.animationSpeedPercent = percent;
+  }
+
   private wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
 
   private walkWait() {
-    return this.wait(this.reducedMotion ? REDUCED_WALK_MS : WALK_MS);
+    const base = this.reducedMotion ? REDUCED_WALK_MS : WALK_MS;
+    // Higher speed % = faster = shorter wait, so divide rather than
+    // multiply; clamp so a 0% setting can never hang forever.
+    const speed = Math.max(this.animationSpeedPercent, 10) / 100;
+    return this.wait(base / speed);
   }
 
   async playScene(payload: ReminderShowPayload, entrancePref: "left" | "right" | "random" = "random") {
     this.resolved = false;
     this.reminderId = payload.reminderId;
     this.snoozeMin = payload.snoozeMin;
+    this.callbacks.onPropChange(payload.prop ?? null);
 
     const side: EntranceSide =
       entrancePref === "random" ? (Math.random() < 0.5 ? "left" : "right") : entrancePref;
@@ -120,17 +137,24 @@ export class Director {
       choice === "yes" && stats !== null && stats.goal > 0 && stats.glasses === stats.goal;
 
     if (choice === "yes") {
-      if (this.sound.enabled) playYesDing(this.sound.volume);
+      if (this.sound.enabled) {
+        // The goal-reached fanfare is the bigger moment — play that
+        // instead of the regular clap rather than layering both at once.
+        if (justReachedGoal) playGoalReached(this.sound.volume);
+        else playYesDing(this.sound.volume);
+      }
       const praise = justReachedGoal
         ? `Goal done! ${stats!.glasses}/${stats!.goal} 🎉`
         : PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)];
       this.callbacks.onLineChange(praise);
       this.callbacks.onStateChange("happy");
       if (justReachedGoal) this.callbacks.onGoalReached();
+      else this.callbacks.onYesCelebrate();
       await this.wait(900);
       this.callbacks.onStateChange("wave");
       await this.wait(500);
     } else if (choice === "later") {
+      if (this.sound.enabled) playLaterShrug(this.sound.volume);
       this.callbacks.onLineChange(`Okay, ${this.snoozeMin} minutes!`);
       this.callbacks.onStateChange("shrug");
       await this.wait(700);
@@ -146,6 +170,7 @@ export class Director {
 
     this.callbacks.onStateChange("hidden");
     this.callbacks.onLineChange("");
+    this.callbacks.onPropChange(null);
 
     await invoke("end_scene");
   }

@@ -1,0 +1,48 @@
+entry-pop.wav, later-shrug.wav, yes-ding.wav (unused fallback, kept in
+case needed later) — and confirmation_004.wav layered into
+goal-reached.wav (see below)
+--------------------------------------------------------------------
+	Interface Sounds (1.0)
+
+	Created/distributed by Kenney (www.kenney.nl)
+	Creation date: 11-02-2020
+
+			------------------------------
+
+	License: (Creative Commons Zero, CC0)
+	http://creativecommons.org/publicdomain/zero/1.0/
+
+	This content is free to use in personal, educational and commercial projects.
+	Support us by crediting Kenney or www.kenney.nl (this is not mandatory)
+
+			------------------------------
+
+	Donate:   http://support.kenney.nl
+	Patreon:  http://patreon.com/kenney/
+
+	Follow on Twitter for updates:
+	http://twitter.com/KenneyNL
+
+
+yes-clap.wav
+--------------------------------------------------------------------
+	Source: Bigsoundbank.com — "Applause from 40 People #6"
+	https://bigsoundbank.com/applause-from-40-people-6-s3522.html
+
+	License: CC0 (public domain)
+	Free and royalty-free: may be edited, remixed, and redistributed,
+	including for commercial use, without permission or payment.
+	Attribution is not required (though appreciated).
+
+	Original clip trimmed to the first 1.5s of actual applause (the
+	source has a ~1.7s silent lead-in before the clapping starts) with a
+	short fade-out, to suit a quick UI feedback sound.
+
+
+goal-reached.wav
+--------------------------------------------------------------------
+	Same yes-clap.wav applause clip (see above, CC0/Bigsoundbank.com)
+	mixed with Kenney's confirmation_004.wav (CC0, Interface Sounds pack,
+	see above) layered slightly after the start, for a bigger fanfare
+	feel than the regular clap — played specifically when the daily
+	water goal is reached, not on every YES.

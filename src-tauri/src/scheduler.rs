@@ -308,6 +308,7 @@ fn fire<R: Runtime>(app: &AppHandle<R>, reminder: &Reminder) {
         yes_label: reminder.yes_label.clone(),
         later_label: reminder.later_label.clone(),
         snooze_min: reminder.snooze_min,
+        prop: reminder.prop.clone(),
     };
     drop(inner);
 

@@ -29,6 +29,11 @@ pub struct StateConfig {
     pub is_loop: bool,
     #[serde(rename = "move", skip_serializing_if = "Option::is_none")]
     pub move_kind: Option<String>, // "enter" | "exit"
+    /// Frame count, written by make_pack.py. Lets the frontend fetch all
+    /// of a state's frames in parallel instead of sequentially probing
+    /// URLs until one 404s.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_count: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +46,10 @@ pub struct PackManifest {
     pub fps: u32,
     #[serde(default = "default_height")]
     pub height_px: u32,
+    /// Real frame width in px, written by make_pack.py for `frames` packs.
+    /// `svg` packs don't set this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width_px: Option<u32>,
     #[serde(default = "default_anchor")]
     pub anchor: AnchorPoint,
     #[serde(default = "default_bubble_offset")]

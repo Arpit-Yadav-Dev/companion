@@ -7,17 +7,15 @@
     EntranceSidePref,
     PositionPref,
     PackInfo,
+    Reminder,
   } from "../shared/types";
   import SvgCharacter from "../overlay/SvgCharacter.svelte";
-  import PixelCharacter from "../overlay/PixelCharacter.svelte";
-  import BiscuitCharacter from "../overlay/BiscuitCharacter.svelte";
-  import SproutCharacter from "../overlay/SproutCharacter.svelte";
-  import SunnyCharacter from "../overlay/SunnyCharacter.svelte";
-  import MarshmallowCharacter from "../overlay/MarshmallowCharacter.svelte";
+  import ScoutCharacter from "../overlay/ScoutCharacter.svelte";
   import FramesCharacter from "../overlay/FramesCharacter.svelte";
 
   let prefs = $state<CharacterPrefs | null>(null);
   let packs = $state<PackInfo[]>([]);
+  let reminders = $state<Reminder[]>([]);
   let importing = $state(false);
   let importError = $state("");
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -39,9 +37,21 @@
     { value: "bottom_center", label: "Bottom-center" },
   ];
 
+  // Human-readable label for each known prop id, so the "Reminder poses"
+  // section below reads as "Water -> Bottle" rather than raw JSON keys.
+  const PROP_LABELS: Record<string, string> = {
+    bottle: "Bottle",
+    stretch: "Stretch",
+    lookfar: "Look far",
+    posture: "Sit up straight",
+  };
+
   onMount(async () => {
-    prefs = await invoke<CharacterPrefs>("get_character_prefs");
-    packs = await invoke<PackInfo[]>("list_packs");
+    [prefs, packs, reminders] = await Promise.all([
+      invoke<CharacterPrefs>("get_character_prefs"),
+      invoke<PackInfo[]>("list_packs"),
+      invoke<Reminder[]>("get_reminders"),
+    ]);
   });
 
   function scheduleSave() {
@@ -73,12 +83,48 @@
       importing = false;
     }
   }
+
+  let activePack = $derived(packs.find((p) => p.manifest.id === prefs?.activePackId) ?? null);
 </script>
+
+{#snippet characterPreview(pack: PackInfo, scale: number)}
+  {#if pack.manifest.id === "scout"}
+    <ScoutCharacter sceneState="idle" {scale} />
+  {:else if pack.manifest.renderer === "svg"}
+    <SvgCharacter sceneState="idle" theme={prefs?.theme ?? "blue"} {scale} />
+  {:else if pack.manifest.renderer === "frames"}
+    <FramesCharacter
+      sceneState="idle"
+      manifest={pack.manifest}
+      packDir={pack.dir}
+      {scale}
+      maxFramesPerState={1}
+    />
+  {:else}
+    <div class="placeholder">🖼️</div>
+  {/if}
+{/snippet}
 
 <h1 class="panel-title">Character</h1>
 <p class="panel-subtitle">Pick who shows up, and how.</p>
 
 {#if prefs}
+  {#if activePack}
+    <section class="hero card">
+      <div class="hero-preview">
+        {@render characterPreview(activePack, 1)}
+      </div>
+      <div class="hero-info">
+        <span class="hero-eyebrow">Currently active</span>
+        <h2 class="hero-name">{activePack.manifest.name}</h2>
+        <p class="hero-meta">
+          {activePack.manifest.renderer === "frames" ? "Animated from video" : "Hand-drawn"} · {prefs.sizePercent}%
+          size
+        </p>
+      </div>
+    </section>
+  {/if}
+
   <section class="section">
     <div class="section-header">
       <h2 class="section-title">Gallery</h2>
@@ -95,23 +141,7 @@
           onclick={() => selectPack(pack.manifest.id)}
         >
           <div class="preview">
-            {#if pack.manifest.id === "pixel"}
-              <PixelCharacter sceneState="idle" scale={0.72} />
-            {:else if pack.manifest.id === "biscuit"}
-              <BiscuitCharacter sceneState="idle" scale={0.72} />
-            {:else if pack.manifest.id === "sprout"}
-              <SproutCharacter sceneState="idle" scale={0.72} />
-            {:else if pack.manifest.id === "sunny"}
-              <SunnyCharacter sceneState="idle" scale={0.72} />
-            {:else if pack.manifest.id === "marshmallow"}
-              <MarshmallowCharacter sceneState="idle" scale={0.72} />
-            {:else if pack.manifest.renderer === "svg"}
-              <SvgCharacter sceneState="idle" theme={prefs.theme} scale={0.72} />
-            {:else if pack.manifest.renderer === "frames"}
-              <FramesCharacter sceneState="idle" manifest={pack.manifest} packDir={pack.dir} scale={0.3} />
-            {:else}
-              <div class="placeholder">🖼️</div>
-            {/if}
+            {@render characterPreview(pack, 0.78)}
           </div>
           <span class="pack-name">{pack.manifest.name}</span>
           {#if prefs.activePackId === pack.manifest.id}
@@ -181,11 +211,91 @@
           {/each}
         </select>
       </label>
+
+      <label class="field">
+        <span class="field-label">
+          Animation speed — {prefs.animationSpeedPercent}%
+        </span>
+        <input
+          type="range"
+          min="25"
+          max="150"
+          step="5"
+          bind:value={prefs.animationSpeedPercent}
+          oninput={scheduleSave}
+        />
+      </label>
     </section>
   </div>
+
+  <section class="section card pad">
+    <h2 class="section-title">Reminder poses</h2>
+    <p class="section-subtitle">
+      Each reminder can give the character a fitting pose instead of the generic one — enable a
+      reminder in the Reminders tab to see it in action.
+    </p>
+    <div class="pose-list">
+      {#each reminders as reminder (reminder.id)}
+        <div class="pose-row" class:dim={!reminder.enabled}>
+          <span class="pose-emoji">{reminder.emoji}</span>
+          <span class="pose-title">{reminder.title}</span>
+          <span class="pose-arrow">→</span>
+          <span class="pose-tag">{PROP_LABELS[reminder.prop ?? ""] ?? "Generic"}</span>
+          {#if !reminder.enabled}
+            <span class="pose-off">off</span>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  </section>
 {/if}
 
 <style>
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+
+  .hero-preview {
+    flex: 0 0 auto;
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .hero-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .hero-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+  }
+
+  .hero-name {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .hero-meta {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
   .section {
     margin-bottom: var(--space-6);
   }
@@ -211,6 +321,12 @@
     margin-bottom: 0;
   }
 
+  .section-subtitle {
+    margin: calc(var(--space-3) * -1) 0 var(--space-3) 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
   .import-btn {
     font-size: 0.78rem;
     padding: 0.4rem 0.8rem;
@@ -218,7 +334,7 @@
 
   .gallery {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
     gap: var(--space-3);
   }
 
@@ -253,7 +369,7 @@
   }
 
   .preview {
-    height: 76px;
+    height: 92px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -344,5 +460,56 @@
     color: var(--danger);
     font-size: 0.8rem;
     margin-top: var(--space-2);
+  }
+
+  .pose-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .pose-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-1);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+  }
+  .pose-row.dim {
+    opacity: 0.45;
+  }
+
+  .pose-emoji {
+    font-size: 1.1rem;
+    width: 1.5rem;
+    text-align: center;
+  }
+
+  .pose-title {
+    font-weight: 600;
+    color: var(--text);
+    min-width: 7rem;
+  }
+
+  .pose-arrow {
+    color: var(--text-faint);
+  }
+
+  .pose-tag {
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+  }
+
+  .pose-off {
+    margin-left: auto;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
   }
 </style>

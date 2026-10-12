@@ -1,59 +1,49 @@
-// Sound effects for the overlay: a soft "pop" on reminder entry and a
-// "gulp/ding" on YES.
+// Sound effects for the overlay: a soft "pop" on entry, a celebratory
+// clap on YES, a gentle neutral sound on "later", and a bigger fanfare
+// when the daily goal is reached.
 //
-// PLACEHOLDER NOTICE: these are synthesized with the Web Audio API rather
-// than real recorded sound-design assets (.ogg/.m4a), because no audio
-// files were available when this was built. The brief calls for bundled
-// recorded sounds, and the user has confirmed sound is a required part of
-// the final polish, not optional — swapping these synthesized tones for
-// real short audio files is a known, tracked follow-up (see memory:
-// sound-assets-followup), not a finished design decision.
+// Real recorded assets (static/sounds/*.wav), not synthesized tones —
+// see static/sounds/LICENSE.txt for each file's source and license (all
+// CC0/free for commercial use, no attribution required).
 
-let audioContext: AudioContext | null = null;
+const ENTRY_POP_SRC = "/sounds/entry-pop.wav";
+const YES_CLAP_SRC = "/sounds/yes-clap.wav";
+const LATER_SHRUG_SRC = "/sounds/later-shrug.wav";
+const GOAL_REACHED_SRC = "/sounds/goal-reached.wav";
 
-function getContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  return audioContext;
-}
-
-function playTone(
-  frequencies: number[],
-  durationMs: number,
-  volume: number,
-  type: OscillatorType = "sine",
-) {
-  const ctx = getContext();
-  if (ctx.state === "suspended") {
-    void ctx.resume();
-  }
-
-  const now = ctx.currentTime;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(volume, now + 0.015);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
-  gain.connect(ctx.destination);
-
-  const stepDuration = durationMs / 1000 / frequencies.length;
-  frequencies.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    const start = now + i * stepDuration;
-    osc.start(start);
-    osc.stop(start + stepDuration + 0.02);
+function play(src: string, volume: number) {
+  // A fresh Audio element per play, rather than cloneNode on a shared
+  // preloaded element — cloneNode's clone doesn't reliably inherit the
+  // original's already-buffered data in WKWebView, so it can end up
+  // re-fetching/re-decoding on every play and silently never actually
+  // starting in time (or at all). These files are tiny, so a fresh
+  // element each time costs nothing and this also naturally lets the
+  // same sound overlap itself if two reminders fire close together.
+  const instance = new Audio(src);
+  instance.volume = Math.min(Math.max(volume, 0), 1);
+  void instance.play().catch(() => {
+    // Autoplay/permission errors are not actionable here — the overlay
+    // has no visible UI to surface them in, and a missed sound effect
+    // isn't worth interrupting the reminder flow over.
   });
 }
 
 /** Soft, short pop — played when the character walks in / the bubble appears. */
 export function playEntryPop(volume: number) {
-  playTone([520], 110, volume * 0.5, "sine");
+  play(ENTRY_POP_SRC, volume * 0.7);
 }
 
-/** A cheerful rising "gulp/ding" — played on YES. */
+/** A short, fun round of applause — played on YES. */
 export function playYesDing(volume: number) {
-  playTone([660, 880], 220, volume * 0.6, "sine");
+  play(YES_CLAP_SRC, volume * 0.8);
+}
+
+/** A gentle, neutral acknowledgment — played on "Remind me later". */
+export function playLaterShrug(volume: number) {
+  play(LATER_SHRUG_SRC, volume * 0.6);
+}
+
+/** A bigger celebratory fanfare — played when the daily goal is reached. */
+export function playGoalReached(volume: number) {
+  play(GOAL_REACHED_SRC, volume * 0.85);
 }

@@ -81,7 +81,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Done!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 5,
-            prop: None,
+            prop: Some("lookfar".into()),
         },
         Reminder {
             id: "posture".into(),
@@ -95,7 +95,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Fixed!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 10,
-            prop: None,
+            prop: Some("posture".into()),
         },
         Reminder {
             id: "walk".into(),

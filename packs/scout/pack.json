@@ -1,9 +1,9 @@
 {
-  "id": "sunny",
-  "name": "Sunny",
+  "id": "scout",
+  "name": "Scout",
   "renderer": "svg",
   "fps": 60,
-  "heightPx": 150,
+  "heightPx": 158,
   "anchor": { "x": 0.5, "y": 1.0 },
   "bubbleOffset": { "x": 0, "y": -0.95 },
   "states": {
