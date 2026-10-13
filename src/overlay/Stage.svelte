@@ -69,7 +69,12 @@
         rects.push({ x: r.x, y: r.y, width: r.width, height: r.height });
       }
       if (bubbleEl && buttonsVisible) {
-        const r = bubbleEl.getBoundingClientRect();
+        // The wrapper is a fixed-width lane that keeps the character from
+        // sliding when the text changes; the bubble inside it overflows
+        // that lane, so measure the bubble itself or the clickable area
+        // would be clipped to the narrower wrapper.
+        const target = bubbleEl.firstElementChild ?? bubbleEl;
+        const r = target.getBoundingClientRect();
         rects.push({ x: r.x, y: r.y, width: r.width, height: r.height });
       }
     }
@@ -251,11 +256,20 @@
     gap: calc(0.75rem + 2.5rem * max(var(--char-scale, 1) - 1, 0));
   }
 
+  /* Distance from the screen edge to the character's centre line. The
+     bubble overflows the character's lane symmetrically, so this is also
+     how much room the bubble has on its tightest side — the rule below
+     caps the bubble at twice this so it can never spill off the corner. */
+  .scene.pos-bottom-left,
+  .scene.pos-bottom-right {
+    --edge-room: 13rem;
+  }
+
   .scene.pos-bottom-left {
-    left: 4rem;
+    left: calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2);
   }
   .scene.pos-bottom-right {
-    right: 4rem;
+    right: calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2);
   }
   .scene.pos-bottom-center {
     left: 50%;
@@ -267,6 +281,37 @@
     pointer-events: auto;
     display: flex;
     justify-content: center;
+  }
+
+  /* The scene is anchored by one edge but sized by its widest child, which
+     is the bubble. Every text change ("Did you drink water?" -> "Nice!")
+     resized the scene, and because the column centres its children the
+     character slid sideways with it — a visible jump mid-scene.
+
+     Giving the character a fixed track and letting the bubble overflow it
+     keeps the character still: the scene's width no longer depends on the
+     text, so only the bubble changes size. */
+  .character-wrap {
+    width: calc(190px * var(--char-scale, 1));
+    justify-content: center;
+    flex: none;
+  }
+
+  .bubble-wrap {
+    width: calc(190px * var(--char-scale, 1));
+    justify-content: center;
+  }
+
+  /* The bubble itself may be wider than that track; it grows around the
+     character's centre line instead of pushing the layout.
+
+     It overflows symmetrically, so the usable width is twice the distance
+     from the character's centre to the nearest screen edge — anything
+     wider spills off that edge and the text is clipped. --edge-room is
+     that distance, set per position below. */
+  .bubble-wrap > :global(*) {
+    flex: none;
+    max-width: min(68vw, calc(var(--edge-room, 50vw) * 2 - 1.5rem));
   }
 
   /* Characters draw with overflow visible (jumps, raised arms, waves all

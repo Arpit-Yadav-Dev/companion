@@ -16,12 +16,6 @@
     "clip": 352084
   },
   {
-    "id": "kong",
-    "name": "Kong",
-    "clip": 137458,
-    "note": "true green screen"
-  },
-  {
     "id": "coach",
     "name": "Coach",
     "clip": 115071,
@@ -100,11 +94,6 @@
     "name": "Lucky",
     "clip": 259808,
     "note": "leprechaun"
-  },
-  {
-    "id": "pierre",
-    "name": "Pierre",
-    "clip": 143765
   },
   {
     "id": "scout3d",
