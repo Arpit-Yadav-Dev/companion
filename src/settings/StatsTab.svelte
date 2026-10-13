@@ -24,6 +24,18 @@
   const CHART_BAR_WIDTH = 30;
   const CHART_GAP = 16;
 
+  let responseParts = $derived([
+    { key: "yes", label: "answered", count: snapshot?.today.yesCount ?? 0 },
+    { key: "later", label: "deferred", count: snapshot?.today.laterCount ?? 0 },
+    { key: "missed", label: "missed", count: snapshot?.today.missedCount ?? 0 },
+  ]);
+  let totalResponses = $derived(responseParts.reduce((sum, p) => sum + p.count, 0));
+
+  function adjustGoal(delta: number) {
+    goalInput = Math.min(20, Math.max(1, goalInput + delta));
+    scheduleSaveGoal();
+  }
+
   function dayLabel(dateStr: string): string {
     const d = new Date(dateStr + "T00:00:00");
     return d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
@@ -63,10 +75,21 @@
   <section class="section card pad">
     <div class="section-header">
       <h2 class="section-title">Last 7 days</h2>
-      <label class="goal-field">
+      <div class="goal-field">
         <span class="field-label">Daily goal</span>
-        <input type="number" min="1" bind:value={goalInput} oninput={scheduleSaveGoal} />
-      </label>
+        <!-- Stepper rather than a bare number box: the goal moves by one
+             glass at a time, and the dashed line on the chart below is
+             what it actually controls. -->
+        <div class="stepper">
+          <button onclick={() => adjustGoal(-1)} disabled={goalInput <= 1} aria-label="Lower goal"
+            >−</button
+          >
+          <span class="stepper-value">{goalInput}</span>
+          <button onclick={() => adjustGoal(1)} disabled={goalInput >= 20} aria-label="Raise goal"
+            >+</button
+          >
+        </div>
+      </div>
     </div>
 
     <svg
@@ -113,11 +136,32 @@
 
   <section class="section card pad">
     <h2 class="section-title">Today's responses</h2>
-    <div class="response-row">
-      <span class="response-pill yes">✓ {snapshot.today.yesCount} yes</span>
-      <span class="response-pill later">⏱ {snapshot.today.laterCount} later</span>
-      <span class="response-pill missed">— {snapshot.today.missedCount} missed</span>
-    </div>
+    {#if totalResponses > 0}
+      <!-- One stacked bar rather than three separate counts: how the day
+           split between answering, deferring and ignoring is the point,
+           and proportions are what show that. -->
+      <div class="response-bar" aria-hidden="true">
+        {#each responseParts as part (part.key)}
+          {#if part.count > 0}
+            <span
+              class="response-part {part.key}"
+              style="width: {(part.count / totalResponses) * 100}%"
+            ></span>
+          {/if}
+        {/each}
+      </div>
+      <div class="response-legend">
+        {#each responseParts as part (part.key)}
+          <span class="legend-item" class:zero={part.count === 0}>
+            <span class="legend-dot {part.key}"></span>
+            {part.count}
+            {part.label}
+          </span>
+        {/each}
+      </div>
+    {:else}
+      <p class="empty-note">No reminders yet today.</p>
+    {/if}
   </section>
 {/if}
 
@@ -205,9 +249,47 @@
     flex-direction: column;
     gap: var(--space-1);
   }
-  .goal-field input {
-    width: 70px;
+
+  .stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+
+  .stepper button {
+    width: 26px;
+    height: 24px;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
+  }
+  .stepper button:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+  .stepper button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .stepper-value {
+    min-width: 24px;
     text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
   }
 
   .chart {
@@ -234,32 +316,68 @@
     fill: var(--text-faint);
   }
 
-  .response-row {
+  .response-bar {
     display: flex;
-    gap: var(--space-3);
-    flex-wrap: wrap;
+    width: 100%;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    background: var(--surface-sunken);
   }
 
-  .response-pill {
+  .response-part {
+    display: block;
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .response-part.yes {
+    background: var(--success);
+  }
+  .response-part.later {
+    background: var(--warning);
+  }
+  .response-part.missed {
+    background: var(--border-strong);
+  }
+
+  .response-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+  }
+
+  .legend-item {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
-    padding: 0.4rem 0.8rem;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    font-weight: 650;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .legend-item.zero {
+    color: var(--text-faint);
   }
 
-  .response-pill.yes {
-    color: var(--success);
-    background: color-mix(in srgb, var(--success) 14%, transparent);
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
   }
-  .response-pill.later {
-    color: var(--warning);
-    background: color-mix(in srgb, var(--warning) 14%, transparent);
+  .legend-dot.yes {
+    background: var(--success);
   }
-  .response-pill.missed {
+  .legend-dot.later {
+    background: var(--warning);
+  }
+  .legend-dot.missed {
+    background: var(--border-strong);
+  }
+
+  .empty-note {
+    margin: 0;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    background: var(--surface-hover);
   }
 </style>

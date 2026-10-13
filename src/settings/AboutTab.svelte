@@ -50,15 +50,22 @@
 
 <section class="section card pad">
   <h2 class="section-title">Your data</h2>
-  <p class="row-hint">
-    Everything is stored locally as JSON — no accounts, no network calls.
-  </p>
+  <!-- The app's privacy claim is worth stating plainly rather than in one
+       passing clause: it's a reason to trust something that watches when
+       you're at your desk. -->
+  <ul class="facts">
+    <li>Stored on this Mac only, as plain JSON</li>
+    <li>No account, no sign-in</li>
+    <li>Works offline — the app never calls home</li>
+  </ul>
   <button class="btn" onclick={openDataFolder}>Open data folder</button>
 </section>
 
 <section class="section card pad danger-zone">
-  <h2 class="section-title danger-title">Danger zone</h2>
-  <p class="row-hint">Clears all reminders, preferences, and stats back to their defaults.</p>
+  <h2 class="section-title danger-title">Start fresh</h2>
+  <p class="row-hint">
+    Clears every reminder, preference and stat back to its default. This can't be undone.
+  </p>
   <div class="danger-actions">
     <button class="btn btn-danger" onclick={resetAll}>
       {confirmingReset ? "Click again to confirm" : "Reset all data"}
@@ -127,6 +134,36 @@
     font-size: 0.82rem;
     color: var(--text-muted);
     margin: 0 0 var(--space-3) 0;
+  }
+
+  .facts {
+    list-style: none;
+    margin: 0 0 var(--space-4);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .facts li {
+    position: relative;
+    padding-left: 1.3rem;
+    font-size: 0.83rem;
+    color: var(--text-muted);
+  }
+
+  /* A drawn tick rather than an emoji or a list bullet, so it takes the
+     accent colour and sits on the text's own baseline. */
+  .facts li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.42em;
+    width: 9px;
+    height: 5px;
+    border-left: 2px solid var(--success);
+    border-bottom: 2px solid var(--success);
+    rotate: -45deg;
   }
 
   .danger-zone {
