@@ -124,13 +124,32 @@ h3 {
   margin: 0 0 var(--space-1) 0;
   font-size: 1.5rem;
   font-weight: 700;
+  letter-spacing: -0.015em;
   color: var(--text);
 }
 
 .panel-subtitle {
   margin: 0 0 var(--space-5) 0;
   font-size: 0.85rem;
+  line-height: 1.45;
   color: var(--text-muted);
+  max-width: 54ch;
+}
+
+.section.pad,
+.card.pad {
+  padding: var(--space-5) var(--space-5);
+}
+
+.section {
+  margin-bottom: var(--space-4);
+}
+
+.section-title {
+  margin: 0 0 var(--space-3) 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .card {

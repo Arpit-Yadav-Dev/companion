@@ -115,9 +115,6 @@
   .section {
     margin-bottom: var(--space-4);
   }
-  .section.pad {
-    padding: var(--space-4) var(--space-5);
-  }
 
   .section-title {
     margin: 0 0 var(--space-2) 0;

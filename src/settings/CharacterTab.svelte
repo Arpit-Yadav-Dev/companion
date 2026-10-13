@@ -468,9 +468,6 @@
     margin-bottom: var(--space-6);
   }
 
-  .section.pad {
-    padding: var(--space-4) var(--space-5);
-  }
 
   .section-header {
     display: flex;

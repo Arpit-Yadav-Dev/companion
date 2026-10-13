@@ -20,9 +20,12 @@
     }, 300);
   }
 
-  const CHART_HEIGHT = 90;
+  const CHART_HEIGHT = 96;
   const CHART_BAR_WIDTH = 30;
-  const CHART_GAP = 16;
+  const CHART_GAP = 18;
+  // Space above the goal line so a day that beats its goal has somewhere to
+  // sit, and the line itself isn't flush against the card's top edge.
+  const CHART_HEADROOM = 14;
 
   let responseParts = $derived([
     { key: "yes", label: "answered", count: snapshot?.today.yesCount ?? 0 },
@@ -94,9 +97,9 @@
 
     <svg
       class="chart"
-      viewBox="0 0 {snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)} {CHART_HEIGHT + 22}"
+      viewBox="0 0 {snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)} {CHART_HEIGHT + CHART_HEADROOM + 22}"
       width={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)}
-      height={CHART_HEIGHT + 22}
+      height={CHART_HEIGHT + CHART_HEADROOM + 22}
     >
       <!-- The goal line turns each bar from a raw count into a pass/fail
            at a glance; without it the bars only compare days to each
@@ -104,9 +107,9 @@
       <line
         class="goal-line"
         x1="0"
-        y1="0.5"
+        y1={CHART_HEADROOM + 0.5}
         x2={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP) - CHART_GAP}
-        y2="0.5"
+        y2={CHART_HEADROOM + 0.5}
       />
       {#each snapshot.lastSevenDays as day, i (day.date)}
         {@const goal = day.goal || 1}
@@ -115,7 +118,7 @@
         {@const x = i * (CHART_BAR_WIDTH + CHART_GAP)}
         <rect
           x={x}
-          y={CHART_HEIGHT - barHeight}
+          y={CHART_HEADROOM + CHART_HEIGHT - barHeight}
           width={CHART_BAR_WIDTH}
           height={barHeight}
           rx="6"
@@ -124,7 +127,7 @@
         />
         <text
           x={x + CHART_BAR_WIDTH / 2}
-          y={CHART_HEIGHT + 16}
+          y={CHART_HEADROOM + CHART_HEIGHT + 17}
           text-anchor="middle"
           class="axis-label"
         >
@@ -168,7 +171,7 @@
 <style>
   .hero-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-3);
     margin-bottom: var(--space-4);
   }
@@ -177,7 +180,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-    padding: var(--space-4) var(--space-4);
+    padding: var(--space-4) var(--space-5);
   }
 
   .hero-value {
@@ -225,9 +228,6 @@
 
   .section {
     margin-bottom: var(--space-4);
-  }
-  .section.pad {
-    padding: var(--space-4) var(--space-5);
   }
 
   .section-header {

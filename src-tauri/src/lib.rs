@@ -64,7 +64,11 @@ pub fn run() {
             // shown on demand from the tray menu.
             WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/".into()))
                 .title("Companion Settings")
-                .inner_size(720.0, 520.0)
+                // Taller than the brief's 720x520: at that height every tab
+                // scrolled on open, which pushed its own title out of view.
+                // The minimum keeps the sidebar and a card side by side.
+                .inner_size(820.0, 660.0)
+                .min_inner_size(640.0, 480.0)
                 .resizable(true)
                 .visible(false)
                 .build()?;
