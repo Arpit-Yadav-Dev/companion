@@ -81,10 +81,17 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     TrayIconBuilder::with_id("companion-tray")
         .icon(app.default_window_icon().cloned().unwrap_or_else(|| {
-            tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png"))
-                .expect("bundled tray icon must decode")
+            // macOS wants a black-and-alpha template it can recolour for
+            // light and dark menu bars; Windows draws the icon as-is, so
+            // the same file would render as a black blob there.
+            #[cfg(target_os = "macos")]
+            let bytes = include_bytes!("../icons/32x32.png").as_slice();
+            #[cfg(not(target_os = "macos"))]
+            let bytes = include_bytes!("../icons/tray-colored.png").as_slice();
+
+            tauri::image::Image::from_bytes(bytes).expect("bundled tray icon must decode")
         }))
-        .icon_as_template(true)
+        .icon_as_template(cfg!(target_os = "macos"))
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(move |app, event| handle_menu_event(app, event.id.as_ref()))

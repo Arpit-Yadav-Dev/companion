@@ -335,19 +335,32 @@ here touches the OS. Not yet tested on a Windows machine.
 
 - Verify WebView2 transparent background has no white flash on window show
   (Phase 2).
-- Swap tray icon to a coloured asset instead of the template/monochrome
-  one used on macOS.
+- ~~Swap tray icon to a coloured asset~~ — done.
+  `icon_as_template` is now macOS-only and Windows gets its own file.
 - Test autostart via the registry `Run` key path.
 - Test single-instance and window-focus-on-relaunch behavior.
-- Implement `idle::idle_duration()` for Windows via `GetLastInputInfo`
-  (user32.dll) — see the doc comment in `idle.rs`'s `#[cfg(not(target_os
-  = "macos"))]` stub.
-- Implement `idle::display_is_asleep()` for Windows. macOS uses
-  `CGDisplayIsAsleep(CGMainDisplayID())`; Windows has no equivalent poll,
-  so this needs `RegisterPowerSettingNotification` with
-  `GUID_CONSOLE_DISPLAY_STATE` and a hidden message window caching the
-  last `PBT_POWERSETTINGCHANGE` state. Until then the stub returns false,
-  which only costs the display-asleep optimisation — the sleep-gap
-  detection in `scheduler.rs` is platform-independent and still works.
-- No GitHub Actions / cross-compiled Windows builds until explicitly
-  requested (Phase 9).
+- ~~Implement `idle::idle_duration()` for Windows~~ — done, via
+  `GetLastInputInfo`. Compiles against the Windows target but has never
+  run on Windows hardware.
+- ~~Implement `idle::display_is_asleep()` for Windows~~ — done, via
+  `GetSystemPowerStatus`. Windows has no direct equivalent of
+  `CGDisplayIsAsleep`; the documented route needs a window to receive
+  `GUID_CONSOLE_DISPLAY_STATE` notifications, so this polls the power
+  status instead and only treats a definite "off" as asleep. Unverified on
+  real hardware — if it proves unreliable, the notification route is the
+  fallback.
+- GitHub Actions builds the Windows installers (`.github/workflows/
+  build.yml`). Tauri needs MSVC and the WebView2 SDK, which only exist on
+  Windows, so there is no supported way to cross-compile from macOS —
+  `cargo check --target x86_64-pc-windows-msvc` also fails locally,
+  because `ring` wants a Windows C compiler.
+
+### Still unverified on Windows
+
+Everything below compiles for the Windows target but has never run there:
+
+- The transparent overlay on WebView2 — the white-flash risk in the brief
+  is still an open question.
+- Click-through and the cursor-polling hit regions.
+- Whether the overlay sits above other windows without the macOS
+  collection-behaviour equivalent.

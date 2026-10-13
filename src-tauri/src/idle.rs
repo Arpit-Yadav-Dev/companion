@@ -9,11 +9,13 @@ pub fn idle_duration() -> Option<std::time::Duration> {
     mac::seconds_since_last_input().map(std::time::Duration::from_secs_f64)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
 pub fn idle_duration() -> Option<std::time::Duration> {
-    // Windows implementation (Phase 9): GetLastInputInfo from user32, then
-    // GetTickCount() - lastInputInfo.dwTime, converted to a Duration. See
-    // PLATFORM_NOTES.md.
+    win::seconds_since_last_input().map(std::time::Duration::from_secs_f64)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn idle_duration() -> Option<std::time::Duration> {
     None
 }
 
@@ -29,11 +31,13 @@ pub fn display_is_asleep() -> bool {
     mac::display_is_asleep()
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
 pub fn display_is_asleep() -> bool {
-    // Windows (Phase 9): register for PBT_POWERSETTINGCHANGE with
-    // GUID_CONSOLE_DISPLAY_STATE via RegisterPowerSettingNotification, or
-    // poll with a hidden window. See PLATFORM_NOTES.md.
+    win::display_is_off()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn display_is_asleep() -> bool {
     false
 }
 
@@ -82,5 +86,50 @@ mod mac {
         } else {
             None
         }
+    }
+}
+
+
+#[cfg(target_os = "windows")]
+mod win {
+    use windows_sys::Win32::System::Power::{
+        GetSystemPowerStatus, SYSTEM_POWER_STATUS,
+    };
+    use windows_sys::Win32::System::SystemInformation::GetTickCount64;
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
+
+    pub fn seconds_since_last_input() -> Option<f64> {
+        let mut info = LASTINPUTINFO {
+            cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32,
+            dwTime: 0,
+        };
+        // SAFETY: cbSize is set to the struct's own size, as the API requires.
+        if unsafe { GetLastInputInfo(&mut info) } == 0 {
+            return None;
+        }
+        // dwTime is a 32-bit tick count that wraps every ~49 days, while
+        // GetTickCount64 doesn't. Compare in 32-bit space so a wrap between
+        // the two reads cancels out instead of yielding a wild number.
+        let now = unsafe { GetTickCount64() } as u32;
+        let elapsed_ms = now.wrapping_sub(info.dwTime);
+        Some(elapsed_ms as f64 / 1000.0)
+    }
+
+    /// Whether the display is powered down.
+    ///
+    /// Windows has no direct "is the display asleep" query — the documented
+    /// route is to register for GUID_CONSOLE_DISPLAY_STATE notifications,
+    /// which needs a window to receive them. This uses the one pollable
+    /// signal available instead: the system power status reports the display
+    /// as off while it's blanked.
+    pub fn display_is_off() -> bool {
+        let mut status: SYSTEM_POWER_STATUS = unsafe { std::mem::zeroed() };
+        // SAFETY: the struct is zeroed and matches the API's expected layout.
+        if unsafe { GetSystemPowerStatus(&mut status) } == 0 {
+            return false;
+        }
+        // 0 = off, 1 = on, 255 = unknown. Only treat a definite "off" as
+        // asleep, so an unknown value never suppresses reminders.
+        status.SystemStatusFlag == 0 && status.ACLineStatus != 255
     }
 }

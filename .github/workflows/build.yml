@@ -1,0 +1,52 @@
+name: Build
+
+# Windows binaries are built here rather than locally: Tauri needs the MSVC
+# toolchain and the WebView2 SDK, which only exist on Windows, so there is
+# no supported way to cross-compile them from macOS.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      # Only attach to a release when the run was triggered by a version
+      # tag; a manual run just leaves the artifact to download.
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" `
+            (Get-ChildItem -Recurse -Include *.msi,*.exe `
+              -Path src-tauri/target/release/bundle).FullName `
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
