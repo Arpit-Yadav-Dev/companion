@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companion — a little reminder that walks onto your screen</title>
+<meta name="description" content="A tiny Mac app that reminds you to drink water, stretch and take a break — by sending a small character across your screen. Free and open source.">
+<meta property="og:title" content="Companion">
+<meta property="og:description" content="A tiny Mac app that reminds you to drink water, stretch and take a break.">
+<meta property="og:image" content="https://arpit-yadav-dev.github.io/companion/img/hero.png">
+<link rel="icon" href="img/icon.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f7f9;
+    --text: #16181d;
+    --muted: #5b6372;
+    --faint: #8a91a0;
+    --border: rgba(15, 23, 42, 0.1);
+    --accent: #4a90e2;
+    --accent-dark: #3578c7;
+    --warn-bg: #fff8e6;
+    --warn-border: #f0d9a0;
+    --warn-text: #7a5c12;
+    --shadow: 0 2px 4px rgba(15,23,42,.04), 0 12px 32px -8px rgba(15,23,42,.14);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161c;
+      --surface: #1c1f27;
+      --text: #eef0f4;
+      --muted: #a8b0c0;
+      --faint: #767e8f;
+      --border: rgba(255,255,255,.1);
+      --accent: #5b96ff;
+      --accent-dark: #4a85ee;
+      --warn-bg: #2a2314;
+      --warn-border: #4d4126;
+      --warn-text: #e3c882;
+      --shadow: 0 2px 4px rgba(0,0,0,.3), 0 12px 32px -8px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+
+  header { padding: 56px 0 8px; text-align: center; }
+  .logo {
+    width: 68px; height: 68px; border-radius: 17px;
+    background: var(--accent); display: inline-grid; place-items: center;
+    box-shadow: var(--shadow); margin-bottom: 22px;
+  }
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(2.1rem, 5.5vw, 3.1rem);
+    letter-spacing: -.03em; line-height: 1.1;
+    text-wrap: balance;
+  }
+  .tagline {
+    margin: 0 auto 32px; max-width: 34ch;
+    font-size: clamp(1.05rem, 2.4vw, 1.2rem);
+    color: var(--muted); text-wrap: balance;
+  }
+
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 14px 26px; border-radius: 11px;
+    font-size: 1rem; font-weight: 650; text-decoration: none;
+    background: var(--accent); color: #fff;
+    box-shadow: var(--shadow);
+    transition: transform .12s ease, background .15s ease;
+  }
+  .btn:hover { background: var(--accent-dark); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent; color: var(--muted);
+    box-shadow: none; border: 1px solid var(--border); font-weight: 600;
+  }
+  .btn-ghost:hover { background: var(--surface); color: var(--text); }
+  .meta { margin-top: 14px; font-size: .85rem; color: var(--faint); }
+
+  .shot { margin: 46px 0 8px; }
+  .shot img {
+    width: 100%; max-width: 100%; height: auto;
+    border-radius: 14px; border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .caption { margin-top: 12px; text-align: center; font-size: .88rem; color: var(--faint); }
+
+  section { padding: 54px 0; }
+  h2 {
+    margin: 0 0 10px; font-size: 1.5rem;
+    letter-spacing: -.02em; text-wrap: balance;
+  }
+  .lede { margin: 0 0 28px; color: var(--muted); max-width: 58ch; }
+
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+  .card {
+    padding: 22px; border-radius: 13px;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .card h3 { margin: 0 0 7px; font-size: 1rem; }
+  .card p { margin: 0; font-size: .91rem; color: var(--muted); }
+
+  .cast { width: 100%; height: auto; margin: 8px 0 4px; }
+
+  ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; }
+  ol.steps li {
+    counter-increment: s;
+    position: relative; padding: 0 0 22px 48px;
+  }
+  ol.steps li::before {
+    content: counter(s);
+    position: absolute; left: 0; top: -1px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center;
+    font-size: .85rem; font-weight: 700;
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps span { color: var(--muted); font-size: .93rem; }
+
+  .note {
+    margin-top: 22px; padding: 16px 18px;
+    background: var(--warn-bg); border: 1px solid var(--warn-border);
+    border-radius: 11px; color: var(--warn-text); font-size: .9rem;
+  }
+  .note strong { display: block; margin-bottom: 4px; }
+
+  kbd {
+    padding: 1px 6px; border-radius: 5px;
+    border: 1px solid var(--border); background: var(--bg);
+    font: inherit; font-size: .86em; font-weight: 650;
+  }
+
+  footer {
+    padding: 40px 0 56px; border-top: 1px solid var(--border);
+    text-align: center; color: var(--faint); font-size: .87rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="40" height="40">
+        <circle cx="32" cy="32" r="22" fill="#fff"/>
+        <circle cx="24" cy="27" r="3.6" fill="#4a90e2"/>
+        <circle cx="40" cy="27" r="3.6" fill="#4a90e2"/>
+        <path d="M23 35a11 11 0 0 0 18 0" fill="none" stroke="#4a90e2"
+              stroke-width="3.2" stroke-linecap="round"/>
+      </svg>
+    </span>
+
+    <h1>A little reminder that walks onto your screen</h1>
+    <p class="tagline">
+      Companion nudges you to drink water, stretch, and step away — with a character
+      that walks on, asks, and walks off. Nothing to read. Nothing to dismiss.
+    </p>
+
+    <div class="cta">
+      <a class="btn" href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_universal.dmg">
+        Download for Mac
+      </a>
+      <a class="btn btn-ghost" href="#install">How to install</a>
+    </div>
+    <p class="meta">Free · 7 MB · macOS 12+ · Intel &amp; Apple Silicon</p>
+  </header>
+
+  <div class="shot">
+    <img src="img/hero.png" alt="A cartoon water droplet standing on a desktop, asking 'Hey, Arpit — did you drink water?' with YES and Remind me later buttons.">
+    <p class="caption">This is the whole app. It appears, asks, and leaves.</p>
+  </div>
+
+  <section>
+    <h2>Why it works</h2>
+    <p class="lede">
+      Notifications pile up in a corner and get swiped away without reading. A character
+      walking across your screen is impossible to ignore — and takes one click to answer.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <h3>Stays out of your way</h3>
+        <p>You can click straight through it. Only the character and its two buttons
+           catch the cursor, so it never blocks what you're doing.</p>
+      </div>
+      <div class="card">
+        <h3>Knows when you're away</h3>
+        <p>Pauses while you're gone, and won't greet you with a pile of missed
+           reminders when you come back or wake your Mac.</p>
+      </div>
+      <div class="card">
+        <h3>Yours alone</h3>
+        <p>No account, no sign-up, no tracking. Everything stays on your Mac.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Eleven reminders, or write your own</h2>
+    <p class="lede">
+      Water, stretch, eye rest, posture, walk, medicine, lunch, breathe, wrap up,
+      time to leave, wind down. Each one has its own schedule, wording and buttons —
+      and only water is on until you say otherwise.
+    </p>
+  </section>
+
+  <section>
+    <h2>Thirty-three characters</h2>
+    <p class="lede">
+      Fourteen are drawn into the app and work the moment you install it. Nineteen more
+      are animated from video and download from inside Settings when you pick one —
+      which is why this is a 7 MB download and not a 75 MB one.
+    </p>
+    <img class="cast" src="img/characters.png"
+         alt="Four characters: a water droplet, a koala, a dancing woman, and a doctor with dumbbells.">
+  </section>
+
+  <section id="install">
+    <h2>Installing it</h2>
+    <ol class="steps">
+      <li>
+        <strong>Download the file</strong>
+        <span>Companion_0.1.0_universal.dmg — one file, 7 MB, works on every Mac from 2017 on.</span>
+      </li>
+      <li>
+        <strong>Drag Companion into Applications</strong>
+        <span>Open the downloaded file and drag the icon across, the same as any Mac app.</span>
+      </li>
+      <li>
+        <strong>Right-click it and choose Open</strong>
+        <span>Right-click (or Control-click) Companion in Applications, choose <kbd>Open</kbd>,
+              then <kbd>Open</kbd> again. Just the first time.</span>
+      </li>
+      <li>
+        <strong>Look up at your menu bar</strong>
+        <span>A small face appears near the clock. Click it for Settings — there's no
+              Dock icon and no window, that's normal.</span>
+      </li>
+    </ol>
+
+    <div class="note">
+      <strong>Why step 3?</strong>
+      Opening it by double-clicking shows <em>"cannot be opened because the developer
+      cannot be verified"</em> — macOS says that about any app not signed with a paid
+      Apple certificate, which this one isn't. Right-click → Open is the standard way
+      past it, and you only do it once.
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Free and open source ·
+      <a href="https://github.com/Arpit-Yadav-Dev/companion">Source on GitHub</a> ·
+      <a href="https://github.com/Arpit-Yadav-Dev/companion/issues">Report a problem</a>
+    </p>
+    <p>Windows version is on the way.</p>
+  </footer>
+</div>
+
+</body>
+</html>
