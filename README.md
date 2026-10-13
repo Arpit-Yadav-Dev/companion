@@ -1,8 +1,7 @@
 # Companion
 
-> **Work in progress.** This is under active development — the UI is
-> being reworked, more characters are on the way, and no installer has
-> been released yet. The code runs, but expect rough edges.
+> **Work in progress.** macOS is in good shape and builds a working
+> universal `.dmg`; Windows is not built yet. Expect rough edges.
 
 A tiny menu-bar desktop mascot that reminds you to drink water, stretch,
 rest your eyes, and move — by walking onto your screen, asking a quick
@@ -17,13 +16,17 @@ macOS-specific and what Windows will need.
 
 - A tray/menu-bar icon with live "Next at … · countdown" and
   Active/Paused status
-- An animated character (two built-in ones: **Sip**, a water droplet, and
-  **Scout**, a husky) that walks onto your screen, asks its question with a
-  bold sticker-style speech bubble, and reacts to your answer — all while
-  staying click-through everywhere except the character and its buttons,
-  so it never gets in your way
-- Five built-in reminder types (water, stretch, 20-20-20 eye rest,
-  posture, walk) plus fully custom reminders — each with its own
+- An animated character that walks onto your screen, asks its question
+  with a bold sticker-style speech bubble, and reacts to your answer — all
+  while staying click-through everywhere except the character and its
+  buttons, so it never gets in your way
+- **33 characters.** Fourteen are drawn in SVG and ship with the app
+  (4 KB each), so it works offline from first launch. Nineteen more are
+  animated from video and download on demand, 2-7 MB each — that keeps the
+  installer at ~7 MB instead of ~75 MB
+- Eleven built-in reminders — water, stretch, 20-20-20 eye rest, posture,
+  walk, medicine, lunch, breathe, wrap up, time to leave, wind down — plus
+  fully custom ones — each with its own
   interval, active hours/days, message lines, button labels, and snooze
   time
 - Snooze, pause (30 min / 1 hour / until tomorrow), Do Not Disturb, and
@@ -31,9 +34,9 @@ macOS-specific and what Windows will need.
   come back from a long break)
 - A Settings window with General, Reminders, Character, Stats, and About
   tabs — reminders and prefs apply live, no restart needed
-- A character-pack system: pick between the built-in characters, import
-  a `.zip` pack someone else made, or make your own from AI-generated
-  video clips with the bundled `make-pack` tool
+- A character-pack system: pick any installed character, download more
+  from inside Settings, import a `.zip` someone else made, or build your
+  own from video clips with the bundled `make-pack` tool
 - Fully offline — no accounts, no telemetry, no network calls. All data
   stays in a local JSON store on your machine.
 

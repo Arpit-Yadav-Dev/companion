@@ -243,9 +243,15 @@
 
   {#if catalog.some((c) => !c.installed)}
     <section class="section">
-      <h2 class="section-title">More characters</h2>
+      <div class="group-label">
+        <span class="group-name">More characters</span>
+        <span class="group-hint">
+          {catalog.filter((c) => !c.installed).length} available to download
+        </span>
+      </div>
       <p class="section-subtitle">
-        Animated characters, downloaded only if you want them — so the app stays small.
+        Animated from video, fetched only if you pick them — which is what keeps the app
+        small.
       </p>
 
       <div class="catalog">
