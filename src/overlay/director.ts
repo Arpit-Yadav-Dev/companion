@@ -85,6 +85,13 @@ export class Director {
   }
 
   async playScene(payload: ReminderShowPayload, entrancePref: "left" | "right" | "random" = "random") {
+    // A previous scene's timeout would otherwise outlive it and later fire
+    // choose("timeout") against *this* reminder's id, logging a miss the
+    // user never made and rescheduling the wrong reminder.
+    if (this.timeoutHandle) {
+      clearTimeout(this.timeoutHandle);
+      this.timeoutHandle = undefined;
+    }
     this.resolved = false;
     this.reminderId = payload.reminderId;
     this.snoozeMin = payload.snoozeMin;

@@ -27,6 +27,10 @@ const TICK_INTERVAL: Duration = Duration::from_secs(1);
 /// suspended (system sleep) rather than just scheduled late. Generous
 /// enough that heavy load or a stalled runtime won't trip it.
 const SLEEP_GAP_THRESHOLD_SECS: i64 = 30;
+/// How long to wait for the overlay to report a choice before assuming it
+/// never will. Comfortably past the frontend's own 25s scene timeout, so
+/// this only trips when that timeout itself failed to run.
+const RESPONSE_WATCHDOG: chrono::TimeDelta = chrono::TimeDelta::seconds(90);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PauseDuration {
@@ -66,6 +70,12 @@ struct Inner {
     /// the tick loop won't start another one.
     busy_until: chrono::DateTime<Local>,
     awaiting_response_for: Option<String>,
+    /// When the pending reminder was shown. The frontend has its own 25s
+    /// timeout, but it lives in the very component that might have died —
+    /// a crashed or closed overlay would otherwise leave
+    /// `awaiting_response_for` set forever and silently stop every
+    /// reminder, with the tray still reporting "Active".
+    awaiting_since: Option<chrono::DateTime<Local>>,
     was_idle: bool,
     /// Wall-clock time of the previous tick, used to notice that the
     /// machine slept: ticks are 1s apart, so a much larger jump means the
@@ -89,6 +99,7 @@ impl Default for SchedulerState {
                 paused_until: None,
                 busy_until: now,
                 awaiting_response_for: None,
+                awaiting_since: None,
                 was_idle: false,
                 last_tick: now,
                 last_shown_date: None,
@@ -106,7 +117,21 @@ struct LoadedSettings {
 }
 
 fn load_settings<R: Runtime>(app: &AppHandle<R>) -> LoadedSettings {
-    let store = app.store(STORE_FILE).expect("settings store must open");
+    // Every field below already falls back to a default, so an unreadable
+    // store only costs the user their saved settings. Panicking here would
+    // cost them the whole app: this runs inside setup(), and in a tray-only
+    // accessory app a failed launch shows nothing at all — no window, no
+    // error, not even a menu-bar icon to quit from.
+    let Ok(store) = app.store(STORE_FILE) else {
+        eprintln!("companion: settings store unreadable; starting with defaults");
+        return LoadedSettings {
+            reminders: built_in_defaults(),
+            user_name: "there".into(),
+            daily_goal: 8,
+            dnd: false,
+            start_paused: false,
+        };
+    };
 
     let reminders = store
         .get("reminders")
@@ -267,8 +292,33 @@ fn tick<R: Runtime>(app: &AppHandle<R>) {
         if now < inner.busy_until {
             return;
         }
-        if inner.awaiting_response_for.is_some() {
-            return; // a reminder is already showing
+        if let Some(pending_id) = inner.awaiting_response_for.clone() {
+            // Watchdog. The frontend answers within its own 25s timeout
+            // under normal conditions, so anything past this grace period
+            // means the overlay never replied at all — a crashed or
+            // destroyed webview, or a scene interrupted before it could
+            // resolve. Without this the flag stays set for the rest of the
+            // session and every reminder stops firing, while the tray
+            // still shows "Active" and counts down past zero.
+            let stuck = inner
+                .awaiting_since
+                .map(|since| now.signed_duration_since(since) > RESPONSE_WATCHDOG)
+                .unwrap_or(true);
+            if !stuck {
+                return; // a reminder is legitimately on screen
+            }
+
+            eprintln!("companion: no response for reminder {pending_id}; recovering");
+            inner.awaiting_response_for = None;
+            inner.awaiting_since = None;
+            // Treat it as a miss so the reminder reschedules normally
+            // rather than firing again the instant we clear the flag.
+            if let Some(r) = inner.reminders.iter().find(|r| r.id == pending_id).cloned() {
+                if let Some(rt) = inner.runtime.get_mut(&r.id) {
+                    rt.next_due = now + chrono::Duration::minutes(r.interval_min as i64);
+                }
+            }
+            return;
         }
     }
 
@@ -305,8 +355,19 @@ fn is_within_active_window(reminder: &Reminder, now: chrono::DateTime<Local>) ->
         return false;
     }
     let minute_of_day = now.hour() * 60 + now.minute();
-    minute_of_day >= reminder.active_hours.start_minute
-        && minute_of_day <= reminder.active_hours.end_minute
+    let (start, end) = (
+        reminder.active_hours.start_minute,
+        reminder.active_hours.end_minute,
+    );
+    if start <= end {
+        minute_of_day >= start && minute_of_day <= end
+    } else {
+        // A window that wraps midnight (say 22:00-06:00) has start > end,
+        // which no single range can satisfy — as a plain conjunction this
+        // was false for all 1440 minutes, so the reminder never fired while
+        // still showing as enabled and counting down in the tray.
+        minute_of_day >= start || minute_of_day <= end
+    }
 }
 
 fn fire<R: Runtime>(app: &AppHandle<R>, reminder: &Reminder) {
@@ -340,6 +401,7 @@ fn fire<R: Runtime>(app: &AppHandle<R>, reminder: &Reminder) {
     );
 
     inner.awaiting_response_for = Some(reminder.id.clone());
+    inner.awaiting_since = Some(now);
 
     let payload = crate::commands::ReminderShowPayload {
         reminder_id: reminder.id.clone(),
@@ -430,6 +492,7 @@ pub fn handle_response<R: Runtime>(
 
     let mut inner = state.inner.lock().unwrap();
     inner.awaiting_response_for = None;
+    inner.awaiting_since = None;
     inner.busy_until = now + MIN_GAP;
 
     let delay_min = if choice == "later" { snooze_min } else { interval_min };
@@ -514,6 +577,14 @@ pub fn trigger_now<R: Runtime>(app: &AppHandle<R>, reminder_id: Option<&str>) {
     let state = app.state::<SchedulerState>();
     let reminder = {
         let inner = state.inner.lock().unwrap();
+        // Testing while a scene is already on screen would restart the
+        // director mid-animation and leave the first reminder's pending
+        // state unresolved — it would never reschedule and would re-fire
+        // on the next tick. The tick loop guards this; a manual trigger
+        // has to as well.
+        if inner.awaiting_response_for.is_some() {
+            return;
+        }
         match reminder_id {
             Some(id) => inner.reminders.iter().find(|r| r.id == id).cloned(),
             None => inner.reminders.first().cloned(),
