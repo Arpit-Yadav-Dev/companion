@@ -1,6 +1,5 @@
-entry-pop.wav, later-shrug.wav, yes-ding.wav (unused fallback, kept in
-case needed later) — and confirmation_004.wav layered into
-goal-reached.wav (see below)
+entry-pop.wav, later-shrug.wav, yes-chime.wav, and the chimes layered
+into goal-reached.wav (see below)
 --------------------------------------------------------------------
 	Interface Sounds (1.0)
 
@@ -39,10 +38,30 @@ yes-clap.wav
 	short fade-out, to suit a quick UI feedback sound.
 
 
+All files were re-balanced together so no cue is noticeably louder than
+another: the applause recording sat roughly 18 dB below the Kenney
+sounds, which is why it was hard to hear. One isolated transient in it
+sits near full scale while the crowd sits ~30 dB below, so it is peak-
+limited before being gained — raising the file as a whole would clip that
+spike before the body of the sound came up at all.
+
+entry-pop.wav   Kenney maximize_001.ogg, loudness-normalised with a short
+                fade-out. Replaces a 0.13s click that was too brief to
+                register as anything but a tick.
+later-shrug.wav Kenney minimize_001.ogg, loudness-normalised — a gentle
+                downward "okay then" rather than a buzzer.
+yes-chime.wav   Kenney confirmation_001.ogg + glass_006.ogg, an alternative
+                to the applause for anyone who prefers a clean chime.
+                Not wired up by default.
+
+
 goal-reached.wav
 --------------------------------------------------------------------
-	Same yes-clap.wav applause clip (see above, CC0/Bigsoundbank.com)
-	mixed with Kenney's confirmation_004.wav (CC0, Interface Sounds pack,
-	see above) layered slightly after the start, for a bigger fanfare
-	feel than the regular clap — played specifically when the daily
-	water goal is reached, not on every YES.
+	Kenney confirmation_001.ogg + confirmation_004.ogg + glass_006.ogg
+	(all CC0, Interface Sounds pack, see above), layered as a rising
+	three-note phrase — a bigger moment than a regular YES, played only
+	when the daily water goal is reached.
+
+	Built from chimes rather than the applause: the two played
+	back-to-back (clap for the YES, then this) and two crowd recordings
+	in a row read as one long noise instead of an escalation.

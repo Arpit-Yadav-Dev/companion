@@ -28,22 +28,28 @@ function play(src: string, volume: number) {
   });
 }
 
+// The files are mastered to within a few dB of each other, so these
+// multipliers only express intent — the entry and "later" cues are
+// deliberately softer than the rewards, since they interrupt rather than
+// celebrate. They are not correcting for mismatched source levels, which
+// is what the old wider spread (0.6-0.85) was doing.
+
 /** Soft, short pop — played when the character walks in / the bubble appears. */
 export function playEntryPop(volume: number) {
-  play(ENTRY_POP_SRC, volume * 0.7);
+  play(ENTRY_POP_SRC, volume * 0.75);
 }
 
 /** A short, fun round of applause — played on YES. */
 export function playYesDing(volume: number) {
-  play(YES_CLAP_SRC, volume * 0.8);
+  play(YES_CLAP_SRC, volume);
 }
 
 /** A gentle, neutral acknowledgment — played on "Remind me later". */
 export function playLaterShrug(volume: number) {
-  play(LATER_SHRUG_SRC, volume * 0.6);
+  play(LATER_SHRUG_SRC, volume * 0.7);
 }
 
 /** A bigger celebratory fanfare — played when the daily goal is reached. */
 export function playGoalReached(volume: number) {
-  play(GOAL_REACHED_SRC, volume * 0.85);
+  play(GOAL_REACHED_SRC, volume);
 }
