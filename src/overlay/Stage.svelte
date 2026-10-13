@@ -256,24 +256,37 @@
     gap: calc(0.75rem + 2.5rem * max(var(--char-scale, 1) - 1, 0));
   }
 
-  /* Distance from the screen edge to the character's centre line. The
-     bubble overflows the character's lane symmetrically, so this is also
-     how much room the bubble has on its tightest side — the rule below
-     caps the bubble at twice this so it can never spill off the corner. */
+  /* --edge-room is the distance from the screen edge to the character's
+     centre line. The bubble overflows the character's lane symmetrically,
+     so it is also how much room the bubble has on its tightest side — the
+     rule below caps the bubble at twice this so it can never spill off
+     the corner and clip its text.
+
+     --walk-distance is how far the character travels to reach that spot:
+     the same gap plus its own width, so it starts fully off-screen. The
+     old fixed 60vw only suited the left corner — resting at bottom-right
+     it began mid-screen, so the character appeared out of nowhere instead
+     of walking on. Both entrance sides use this one distance: crossing
+     from the far edge would cover most of the screen in the 1.2s the
+     director waits before the bubble appears, so the feet would skate and
+     the character would start talking mid-stride. Only the facing
+     differs, which varies the entrance without breaking the pacing. */
+  .scene {
+    --walk-distance: calc(var(--edge-room, 13rem) + 190px * var(--char-scale, 1));
+  }
+
   .scene.pos-bottom-left,
   .scene.pos-bottom-right {
     --edge-room: 13rem;
   }
 
-  .scene.pos-bottom-left {
-    left: calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2);
-  }
-  .scene.pos-bottom-right {
-    right: calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2);
-  }
   .scene.pos-bottom-center {
     left: 50%;
     translate: -50% 0;
+    /* Centred, the nearest edge is half the viewport away, so the bubble
+       has far more room than in a corner; cap it at the same 68vw the
+       rule below applies rather than letting it span the screen. */
+    --edge-room: 34vw;
   }
 
   .bubble-wrap,
@@ -337,16 +350,16 @@
   }
 
   .side-left .character-wrap.state-walk_in {
-    animation: slide-in-from-left var(--walk-ms, 1200ms) ease-out both;
+    animation: slide-in-from-left calc(var(--walk-ms, 1200ms)) ease-out both;
   }
   .side-left .character-wrap.state-walk_out {
-    animation: slide-out-to-left var(--walk-ms, 1200ms) ease-in both;
+    animation: slide-out-to-left calc(var(--walk-ms, 1200ms)) ease-in both;
   }
   .side-right .character-wrap.state-walk_in {
-    animation: slide-in-from-right var(--walk-ms, 1200ms) ease-out both;
+    animation: slide-in-from-right calc(var(--walk-ms, 1200ms)) ease-out both;
   }
   .side-right .character-wrap.state-walk_out {
-    animation: slide-out-to-right var(--walk-ms, 1200ms) ease-in both;
+    animation: slide-out-to-right calc(var(--walk-ms, 1200ms)) ease-in both;
   }
 
   .side-right .character-wrap {
@@ -355,7 +368,7 @@
 
   @keyframes slide-in-from-left {
     from {
-      transform: translateX(-60vw);
+      transform: translateX(calc(-1 * var(--walk-distance, 60vw)));
     }
     to {
       transform: translateX(0);
@@ -366,12 +379,12 @@
       transform: translateX(0);
     }
     to {
-      transform: translateX(-60vw);
+      transform: translateX(calc(-1 * var(--walk-distance, 60vw)));
     }
   }
   @keyframes slide-in-from-right {
     from {
-      transform: translateX(60vw) scaleX(-1);
+      transform: translateX(var(--walk-distance, 60vw)) scaleX(-1);
     }
     to {
       transform: translateX(0) scaleX(-1);
@@ -382,7 +395,7 @@
       transform: translateX(0) scaleX(-1);
     }
     to {
-      transform: translateX(60vw) scaleX(-1);
+      transform: translateX(var(--walk-distance, 60vw)) scaleX(-1);
     }
   }
 
