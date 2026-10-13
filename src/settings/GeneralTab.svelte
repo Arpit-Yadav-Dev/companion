@@ -46,7 +46,10 @@
         <span class="toggle-label">Launch at login</span>
         <span class="toggle-hint">Start Companion automatically when you log in.</span>
       </span>
-      <input type="checkbox" bind:checked={prefs.launchAtLogin} onchange={scheduleSave} />
+      <span class="switch">
+        <input type="checkbox" bind:checked={prefs.launchAtLogin} onchange={scheduleSave} />
+        <span class="track"><span class="thumb"></span></span>
+      </span>
     </label>
 
     <label class="toggle-row">
@@ -54,7 +57,10 @@
         <span class="toggle-label">Start paused</span>
         <span class="toggle-hint">Don't show any reminders until you hit Resume.</span>
       </span>
-      <input type="checkbox" bind:checked={prefs.startPaused} onchange={scheduleSave} />
+      <span class="switch">
+        <input type="checkbox" bind:checked={prefs.startPaused} onchange={scheduleSave} />
+        <span class="track"><span class="thumb"></span></span>
+      </span>
     </label>
 
     <label class="toggle-row">
@@ -62,7 +68,10 @@
         <span class="toggle-label">Do Not Disturb</span>
         <span class="toggle-hint">Silences all reminders until you turn this off.</span>
       </span>
-      <input type="checkbox" bind:checked={prefs.dnd} onchange={scheduleSave} />
+      <span class="switch">
+        <input type="checkbox" bind:checked={prefs.dnd} onchange={scheduleSave} />
+        <span class="track"><span class="thumb"></span></span>
+      </span>
     </label>
   </section>
 
@@ -73,7 +82,10 @@
         <span class="toggle-label">Reduced motion</span>
         <span class="toggle-hint">Crossfade in/out instead of walking across the screen.</span>
       </span>
-      <input type="checkbox" bind:checked={prefs.reducedMotion} onchange={scheduleSave} />
+      <span class="switch">
+        <input type="checkbox" bind:checked={prefs.reducedMotion} onchange={scheduleSave} />
+        <span class="track"><span class="thumb"></span></span>
+      </span>
     </label>
 
     <label class="toggle-row">
@@ -81,7 +93,10 @@
         <span class="toggle-label">Sound effects</span>
         <span class="toggle-hint">A soft pop on entry, a cheerful ding on yes.</span>
       </span>
-      <input type="checkbox" bind:checked={prefs.soundEnabled} onchange={scheduleSave} />
+      <span class="switch">
+        <input type="checkbox" bind:checked={prefs.soundEnabled} onchange={scheduleSave} />
+        <span class="track"><span class="thumb"></span></span>
+      </span>
     </label>
 
     {#if prefs.soundEnabled}
