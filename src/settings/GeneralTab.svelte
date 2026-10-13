@@ -62,12 +62,6 @@
     </label>
     <p class="hint">Used wherever reminders say "{"{name}"}" — e.g. "Hey, {prefs.userName}".</p>
 
-    <label class="field">
-      <span class="field-label">Language</span>
-      <select disabled>
-        <option>English</option>
-      </select>
-    </label>
   </section>
 
   <section class="section card pad">
@@ -197,10 +191,6 @@
   }
 
   .field input[type="text"],
-  .field select {
-    width: 100%;
-  }
-
   .hint {
     font-size: 0.78rem;
     color: var(--text-faint);

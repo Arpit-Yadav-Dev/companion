@@ -30,11 +30,21 @@
 <p class="panel-subtitle">Version info, where your data lives, and how to start fresh.</p>
 
 <section class="card pad identity-card">
-  <!-- Same drawn mark as the sidebar rather than an emoji, so the app's
-       own identity doesn't change between two places in one window. -->
+  <!-- The same character as the app icon. It used to be a water droplet,
+       which made an app that also handles posture, medicine and leaving
+       work look like it only tracked water. -->
   <span class="mark" aria-hidden="true">
     <svg viewBox="0 0 16 16" width="22" height="22">
-      <path d="M8 1.6s4.3 4.8 4.3 7.6a4.3 4.3 0 0 1-8.6 0C3.7 6.4 8 1.6 8 1.6Z" fill="currentColor" />
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <path d="M5.4 4.3 3.4 2.2M10.6 4.3l2-2.1" />
+          </g>
+          <circle cx="3.1" cy="1.9" r="1.1" fill="currentColor" />
+          <circle cx="12.9" cy="1.9" r="1.1" fill="currentColor" />
+          <circle cx="8" cy="9.1" r="5.6" fill="currentColor" />
+          <circle cx="6.1" cy="8.2" r="1.35" fill="var(--accent)" />
+          <circle cx="9.9" cy="8.2" r="1.35" fill="var(--accent)" />
+          <path d="M6.3 11.1q1.7 1.3 3.4 0" fill="none" stroke="var(--accent)"
+                stroke-width="0.9" stroke-linecap="round" />
     </svg>
   </span>
   <div>
