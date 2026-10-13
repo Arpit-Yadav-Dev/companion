@@ -66,3 +66,13 @@ clips/
 /packs/stretch.zip
 /packs/tiny
 /packs/tiny.zip
+
+# Credentials — never commit. .env was already covered; these are the
+# other shapes a key or certificate tends to arrive in.
+*.pem
+*.p12
+*.key
+*.keystore
+*.mobileprovision
+secrets.*
+credentials.*
