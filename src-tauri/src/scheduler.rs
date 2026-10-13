@@ -23,6 +23,10 @@ const MIN_GAP: Duration = Duration::from_secs(90);
 const IDLE_PAUSE_THRESHOLD: Duration = Duration::from_secs(5 * 60);
 const AWAY_RESET_THRESHOLD: Duration = Duration::from_secs(15 * 60);
 const TICK_INTERVAL: Duration = Duration::from_secs(1);
+/// A gap between 1Hz ticks larger than this means the process was
+/// suspended (system sleep) rather than just scheduled late. Generous
+/// enough that heavy load or a stalled runtime won't trip it.
+const SLEEP_GAP_THRESHOLD_SECS: i64 = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PauseDuration {
@@ -63,6 +67,10 @@ struct Inner {
     busy_until: chrono::DateTime<Local>,
     awaiting_response_for: Option<String>,
     was_idle: bool,
+    /// Wall-clock time of the previous tick, used to notice that the
+    /// machine slept: ticks are 1s apart, so a much larger jump means the
+    /// process was suspended rather than merely busy.
+    last_tick: chrono::DateTime<Local>,
     /// The local date (YYYY-MM-DD) of the last reminder shown, so the
     /// first reminder of a new day can get the "Good morning" treatment.
     last_shown_date: Option<chrono::NaiveDate>,
@@ -82,6 +90,7 @@ impl Default for SchedulerState {
                 busy_until: now,
                 awaiting_response_for: None,
                 was_idle: false,
+                last_tick: now,
                 last_shown_date: None,
             }),
         }
@@ -194,8 +203,39 @@ fn tick<R: Runtime>(app: &AppHandle<R>) {
     // away > 15 min, reset (not immediately re-fire) the water timer so
     // they aren't nagged the moment they sit back down.
     let idle_for = idle::idle_duration();
+    let display_asleep = idle::display_is_asleep();
     {
         let mut inner = state.inner.lock().unwrap();
+
+        // Ticks are 1s apart, so a much larger gap means the process was
+        // suspended — the machine slept. Wall-clock next_due times are all
+        // long overdue on wake, and firing them immediately would greet the
+        // user with a reminder (and log the rest as missed) for time they
+        // were not at the desk. Push everything out by a fresh interval.
+        //
+        // The idle-based reset below can't cover this on its own: it only
+        // triggers when the previous tick saw the user as idle, and sleeping
+        // mid-use (shutting the lid while typing) leaves was_idle false.
+        let slept_for = now.signed_duration_since(inner.last_tick);
+        inner.last_tick = now;
+        if slept_for > chrono::Duration::seconds(SLEEP_GAP_THRESHOLD_SECS) {
+            for r in &inner.reminders.clone() {
+                if let Some(rt) = inner.runtime.get_mut(&r.id) {
+                    rt.next_due = now + chrono::Duration::minutes(r.interval_min as i64);
+                }
+            }
+            inner.was_idle = false;
+            return;
+        }
+
+        // A reminder shown to a dark screen is simply spent: the user never
+        // sees it, yet it would still reset the timer and be logged as
+        // missed. Hold the timers instead, exactly as for an idle user.
+        if display_asleep {
+            inner.was_idle = true;
+            return;
+        }
+
         let is_idle_now = idle_for.map(|d| d >= IDLE_PAUSE_THRESHOLD).unwrap_or(false);
         let was_away_long = idle_for.map(|d| d >= AWAY_RESET_THRESHOLD).unwrap_or(false);
 

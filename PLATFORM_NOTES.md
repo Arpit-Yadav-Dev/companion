@@ -342,5 +342,12 @@ here touches the OS. Not yet tested on a Windows machine.
 - Implement `idle::idle_duration()` for Windows via `GetLastInputInfo`
   (user32.dll) — see the doc comment in `idle.rs`'s `#[cfg(not(target_os
   = "macos"))]` stub.
+- Implement `idle::display_is_asleep()` for Windows. macOS uses
+  `CGDisplayIsAsleep(CGMainDisplayID())`; Windows has no equivalent poll,
+  so this needs `RegisterPowerSettingNotification` with
+  `GUID_CONSOLE_DISPLAY_STATE` and a hidden message window caching the
+  last `PBT_POWERSETTINGCHANGE` state. Until then the stub returns false,
+  which only costs the display-asleep optimisation — the sleep-gap
+  detection in `scheduler.rs` is platform-independent and still works.
 - No GitHub Actions / cross-compiled Windows builds until explicitly
   requested (Phase 9).
