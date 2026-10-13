@@ -72,7 +72,9 @@ fn default_character() -> CharacterPrefs {
 
 #[tauri::command]
 pub fn get_reminders<R: Runtime>(app: AppHandle<R>) -> Vec<Reminder> {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        return crate::reminders::built_in_defaults();
+    };
     let saved: Vec<Reminder> = store
         .get("reminders")
         .and_then(|v| serde_json::from_value(v).ok())
@@ -109,7 +111,10 @@ pub fn get_reminders<R: Runtime>(app: AppHandle<R>) -> Vec<Reminder> {
 
 #[tauri::command]
 pub fn save_reminders<R: Runtime>(app: AppHandle<R>, reminders: Vec<Reminder>) {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        eprintln!("companion: settings store unwritable; change not saved");
+        return;
+    };
     store.set("reminders", serde_json::to_value(&reminders).unwrap());
     let _ = store.save();
     crate::scheduler::reload_reminders(&app);
@@ -117,7 +122,9 @@ pub fn save_reminders<R: Runtime>(app: AppHandle<R>, reminders: Vec<Reminder>) {
 
 #[tauri::command]
 pub fn get_general_prefs<R: Runtime>(app: AppHandle<R>) -> GeneralPrefs {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        return default_general();
+    };
     store
         .get("general")
         .and_then(|v| serde_json::from_value(v).ok())
@@ -126,7 +133,10 @@ pub fn get_general_prefs<R: Runtime>(app: AppHandle<R>) -> GeneralPrefs {
 
 #[tauri::command]
 pub fn save_general_prefs<R: Runtime>(app: AppHandle<R>, prefs: GeneralPrefs) {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        eprintln!("companion: settings store unwritable; change not saved");
+        return;
+    };
     store.set("general", serde_json::to_value(&prefs).unwrap());
     let _ = store.save();
 
@@ -144,7 +154,9 @@ pub fn save_general_prefs<R: Runtime>(app: AppHandle<R>, prefs: GeneralPrefs) {
 
 #[tauri::command]
 pub fn get_character_prefs<R: Runtime>(app: AppHandle<R>) -> CharacterPrefs {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        return default_character();
+    };
     store
         .get("character")
         .and_then(|v| serde_json::from_value(v).ok())
@@ -153,14 +165,19 @@ pub fn get_character_prefs<R: Runtime>(app: AppHandle<R>) -> CharacterPrefs {
 
 #[tauri::command]
 pub fn save_character_prefs<R: Runtime>(app: AppHandle<R>, prefs: CharacterPrefs) {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        eprintln!("companion: settings store unwritable; change not saved");
+        return;
+    };
     store.set("character", serde_json::to_value(&prefs).unwrap());
     let _ = store.save();
 }
 
 #[tauri::command]
 pub fn get_daily_goal<R: Runtime>(app: AppHandle<R>) -> u32 {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        return 8;
+    };
     store
         .get("dailyGoal")
         .and_then(|v| v.as_u64())
@@ -170,7 +187,10 @@ pub fn get_daily_goal<R: Runtime>(app: AppHandle<R>) -> u32 {
 
 #[tauri::command]
 pub fn save_daily_goal<R: Runtime>(app: AppHandle<R>, goal: u32) {
-    let store = app.store(SETTINGS_STORE).expect("settings store must open");
+    let Ok(store) = app.store(SETTINGS_STORE) else {
+        eprintln!("companion: settings store unwritable; change not saved");
+        return;
+    };
     store.set("dailyGoal", goal);
     let _ = store.save();
     crate::scheduler::set_daily_goal(&app, goal);

@@ -43,3 +43,9 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# macOS-only: NSWindow collection behaviour for the overlay (brief 2.1).
+# Both are already in the tree via tauri, so this pins rather than adds.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSResponder", "NSView"] }

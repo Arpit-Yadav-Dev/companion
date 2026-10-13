@@ -39,8 +39,25 @@ pub struct CatalogEntry {
 
 fn catalog() -> Vec<CatalogEntry> {
     [
-        ("dancing-dog", "Dancing Dog", "A 3D cartoon dog with plenty of energy", 2.4),
-        ("ellie", "Ellie", "A cheerful pink cartoon elephant", 2.6),
+        ("ace", "Ace", "A teen with a tennis racket", 2.6),
+        ("champ", "Champ", "A kid who jumps for joy", 2.8),
+        ("coach", "Coach", "A doctor who lifts weights", 3.9),
+        ("dancer", "Dancer", "A woman dancing in a yellow coat", 3.1),
+        ("dash", "Dash", "A boy running past with a burger", 4.2),
+        ("dentist", "Dentist", "A dentist in blue scrubs", 2.5),
+        ("droplet", "Droplet", "A 3D water drop, perfect for water reminders", 3.8),
+        ("germ", "Germ", "A googly-eyed cartoon virus", 5.4),
+        ("kettle", "Kettle", "A gym-goer with a kettlebell", 2.9),
+        ("kitty", "Kitty", "A hand-drawn pink cat", 6.6),
+        ("koala", "Koala", "A cheerful dancing koala", 4.0),
+        ("lucky", "Lucky", "A leprechaun in a tall hat", 3.9),
+        ("nurse", "Nurse", "A nurse flexing in purple scrubs", 4.2),
+        ("robin", "Robin", "A little bird with a breakfast basket", 3.1),
+        ("ruby", "Ruby", "A girl walking with her phone", 4.4),
+        ("salsa", "Salsa", "A police officer dancing salsa", 3.2),
+        ("scout3d", "Scout", "A man in a striped shirt and hat", 4.0),
+        ("stretch", "Stretch", "A giraffe in a safari hat", 3.4),
+        ("tiny", "Tiny", "A toddler dancing", 2.9),
     ]
     .into_iter()
     .map(|(id, name, description, size_mb)| CatalogEntry {

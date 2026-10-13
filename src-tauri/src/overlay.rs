@@ -85,7 +85,38 @@ pub fn create<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     // interactive rects.
     let _ = window.set_ignore_cursor_events(true);
 
+    #[cfg(target_os = "macos")]
+    apply_macos_collection_behavior(&window);
+
     Ok(())
+}
+
+/// Makes the overlay behave like a system HUD rather than a normal window:
+/// visible on whichever Space is active, able to sit over full-screen apps,
+/// and not dragged along when Spaces switch.
+///
+/// Without this the character simply never appears while the user is in a
+/// full-screen app or on a different Space — the reminder fires, is logged,
+/// and is never seen. `always_on_top` alone doesn't cover it; that only
+/// orders the window within its own Space.
+#[cfg(target_os = "macos")]
+fn apply_macos_collection_behavior<R: Runtime>(window: &tauri::WebviewWindow<R>) {
+    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+
+    let Ok(handle) = window.ns_window() else {
+        return;
+    };
+    // SAFETY: ns_window() hands back the NSWindow backing this webview, and
+    // we only call it on the main thread during setup, which is where Tauri
+    // creates and owns the window.
+    unsafe {
+        let ns_window = &*(handle as *const NSWindow);
+        ns_window.setCollectionBehavior(
+            NSWindowCollectionBehavior::CanJoinAllSpaces
+                | NSWindowCollectionBehavior::FullScreenAuxiliary
+                | NSWindowCollectionBehavior::Stationary,
+        );
+    }
 }
 
 /// Positions and sizes the overlay to cover the work area (screen minus
@@ -192,9 +223,24 @@ fn start_hit_region_polling<R: Runtime>(app: AppHandle<R>) {
             };
 
             if let Ok(cursor) = window.cursor_position() {
-                let origin_x = state.origin_x.load(Ordering::Relaxed) as f64;
-                let origin_y = state.origin_y.load(Ordering::Relaxed) as f64;
+                // Read the origin from the window every tick rather than
+                // trusting the value cached at show time. The two drift
+                // apart whenever the display setup changes underneath a
+                // visible overlay — a monitor unplugged, resolution
+                // changed, the Dock auto-hiding — and on a mixed-DPI setup
+                // the cached origin was captured with one monitor's scale
+                // while the conversion below uses the window's current
+                // one, so they can disagree by a factor of two. Either way
+                // the hit regions land somewhere other than the character,
+                // and the YES / Later buttons stop responding.
                 let scale = window.scale_factor().unwrap_or(1.0);
+                let (origin_x, origin_y) = match window.outer_position() {
+                    Ok(pos) => (pos.x as f64 / scale, pos.y as f64 / scale),
+                    Err(_) => (
+                        state.origin_x.load(Ordering::Relaxed) as f64,
+                        state.origin_y.load(Ordering::Relaxed) as f64,
+                    ),
+                };
 
                 // cursor_position() is in physical pixels; convert to the
                 // overlay's logical/CSS coordinate space before comparing

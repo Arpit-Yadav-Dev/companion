@@ -31,7 +31,20 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../packs/": "packs/"
+      "../packs/aura/": "packs/aura/",
+      "../packs/bao/": "packs/bao/",
+      "../packs/bolt/": "packs/bolt/",
+      "../packs/buzz/": "packs/buzz/",
+      "../packs/flex/": "packs/flex/",
+      "../packs/hop/": "packs/hop/",
+      "../packs/luna/": "packs/luna/",
+      "../packs/mochi/": "packs/mochi/",
+      "../packs/nimbus/": "packs/nimbus/",
+      "../packs/pip/": "packs/pip/",
+      "../packs/scout/": "packs/scout/",
+      "../packs/sip/": "packs/sip/",
+      "../packs/sprout/": "packs/sprout/",
+      "../packs/sunny/": "packs/sunny/"
     }
   }
 }
