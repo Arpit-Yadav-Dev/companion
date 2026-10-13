@@ -1,0 +1,121 @@
+[
+  {
+    "id": "droplet",
+    "name": "Droplet",
+    "clip": 118906,
+    "note": "water drop, has alpha matte"
+  },
+  {
+    "id": "koala",
+    "name": "Koala",
+    "clip": 306088
+  },
+  {
+    "id": "dancer",
+    "name": "Dancer",
+    "clip": 352084
+  },
+  {
+    "id": "kong",
+    "name": "Kong",
+    "clip": 137458,
+    "note": "true green screen"
+  },
+  {
+    "id": "coach",
+    "name": "Coach",
+    "clip": 115071,
+    "note": "doctor with weights, alpha matte"
+  },
+  {
+    "id": "salsa",
+    "name": "Salsa",
+    "clip": 56639,
+    "note": "dancing officer, alpha matte"
+  },
+  {
+    "id": "kitty",
+    "name": "Kitty",
+    "clip": 56375
+  },
+  {
+    "id": "stretch",
+    "name": "Stretch",
+    "clip": 273595,
+    "note": "giraffe"
+  },
+  {
+    "id": "robin",
+    "name": "Robin",
+    "clip": 280481
+  },
+  {
+    "id": "nurse",
+    "name": "Nurse",
+    "clip": 358727
+  },
+  {
+    "id": "dentist",
+    "name": "Dentist",
+    "clip": 284876
+  },
+  {
+    "id": "kettle",
+    "name": "Kettle",
+    "clip": 340736,
+    "note": "kettlebell workout"
+  },
+  {
+    "id": "tiny",
+    "name": "Tiny",
+    "clip": 352082,
+    "note": "toddler dancing"
+  },
+  {
+    "id": "ace",
+    "name": "Ace",
+    "clip": 259142,
+    "note": "tennis"
+  },
+  {
+    "id": "dash",
+    "name": "Dash",
+    "clip": 259141,
+    "note": "running boy"
+  },
+  {
+    "id": "champ",
+    "name": "Champ",
+    "clip": 259139,
+    "note": "jumping boy"
+  },
+  {
+    "id": "ruby",
+    "name": "Ruby",
+    "clip": 259137,
+    "note": "girl walking"
+  },
+  {
+    "id": "lucky",
+    "name": "Lucky",
+    "clip": 259808,
+    "note": "leprechaun"
+  },
+  {
+    "id": "pierre",
+    "name": "Pierre",
+    "clip": 143765
+  },
+  {
+    "id": "scout3d",
+    "name": "Scout",
+    "clip": 72665,
+    "note": "man with phone"
+  },
+  {
+    "id": "germ",
+    "name": "Germ",
+    "clip": 38957,
+    "note": "virus character"
+  }
+]

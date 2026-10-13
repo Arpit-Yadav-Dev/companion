@@ -49,13 +49,29 @@ export function svgCharacterFor(packId: string | undefined | null): Component<an
 }
 
 /**
- * Which character suits each built-in reminder, used as the default
- * suggestion. Users can still pick any character for any reminder.
+ * Which characters suit each built-in reminder, best first, used to order
+ * the Character gallery when a reminder is being edited. Users can still
+ * pick any character for any reminder.
+ *
+ * Entries may name packs that aren't installed (the video packs are
+ * optional downloads), so consumers must filter against what's actually
+ * present rather than trusting a name resolves.
  */
-export const REMINDER_CHARACTER_SUGGESTIONS: Record<string, string> = {
-  water: "pip",
-  stretch: "flex",
-  walk: "flex",
-  posture: "medic",
-  eye_rest: "medic",
+export const REMINDER_CHARACTER_SUGGESTIONS: Record<string, readonly string[]> = {
+  water: ["droplet", "pip", "sip"],
+  stretch: ["dancer", "kettle", "flex", "stretch"],
+  walk: ["dash", "ruby", "flex", "scout"],
+  posture: ["coach", "nurse", "flex"],
+  eye_rest: ["koala", "nimbus", "luna"],
 };
+
+/** The first suggested character for a reminder that is actually installed. */
+export function suggestedCharacterFor(
+  reminderId: string,
+  installedPackIds: readonly string[],
+): string | null {
+  const installed = new Set(installedPackIds);
+  return (
+    REMINDER_CHARACTER_SUGGESTIONS[reminderId]?.find((id) => installed.has(id)) ?? null
+  );
+}

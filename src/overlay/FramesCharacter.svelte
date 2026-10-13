@@ -43,7 +43,15 @@
         ? manifest.widthPx / manifest.heightPx
         : 1,
   );
-  let displayHeight = $derived(manifest.heightPx);
+  // Packs are authored at whatever height their source video gave them
+  // (make_pack.py defaults to 360-420px), but the built-in SVG characters
+  // are ~160px. Rendering a pack at its native height makes it tower over
+  // them and, more importantly, overlap the bubble's buttons. Normalise
+  // every pack to the same on-screen height so the size slider means the
+  // same thing whichever character is active.
+  const TARGET_HEIGHT_PX = 168;
+
+  let displayHeight = $derived(TARGET_HEIGHT_PX);
   let displayWidth = $derived(Math.round(displayHeight * aspect));
 
   let lastAppliedState: SceneState | undefined;
@@ -92,7 +100,11 @@
   });
 </script>
 
-<div class="frames-character state-{sceneState}" class:mirrored style="--scale: {scale}">
+<div
+  class="frames-character state-{sceneState}"
+  class:mirrored
+  style="--scale: {scale}; --frame-w: {displayWidth}px; --frame-h: {displayHeight}px;"
+>
   <canvas
     bind:this={canvasEl}
     style="width: {displayWidth}px; height: {displayHeight}px;"
@@ -106,6 +118,12 @@
     align-items: flex-end;
     justify-content: center;
     transform-origin: bottom center;
+    /* The canvas is scaled with a transform, which layout ignores — so
+       without these the wrapper stays at 1x and a scaled-up character
+       grows straight over the bubble's buttons. Mirror the scale here in
+       real layout units to reserve the room it actually occupies. */
+    width: calc(var(--frame-w, 0px) * var(--scale));
+    height: calc(var(--frame-h, 0px) * var(--scale));
   }
 
   canvas {

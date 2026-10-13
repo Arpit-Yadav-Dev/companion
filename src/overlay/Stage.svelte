@@ -236,15 +236,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Characters are scaled via CSS transform (growing upward from their
-       feet), which doesn't affect flex layout sizing — so a bigger
-       character can visually grow into the bubble/buttons above it even
-       though the gap between them hasn't changed. Every built-in
-       character's native height is roughly 150-190px; at the maximum
-       140% size slider that's up to ~265px tall, so the gap needs to
-       reserve close to that much room at full scale rather than a small
-       flat bump, or the overlap just reappears at higher sizePercent. */
-    gap: calc(0.5rem + 11rem * max(var(--char-scale, 1) - 1, 0));
+    /* Every character now reports its scaled size in real layout units
+       (SVG characters size via width/height; FramesCharacter mirrors its
+       canvas transform onto its wrapper), so flex reserves the right room
+       on its own and the gap is just breathing space. This used to carry
+       a large scale-dependent term to compensate for transform-scaled
+       characters growing over the buttons — that belonged in the
+       characters themselves, not here. */
+    gap: 0.75rem;
   }
 
   .scene.pos-bottom-left {
