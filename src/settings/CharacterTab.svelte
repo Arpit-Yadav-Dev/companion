@@ -145,6 +145,12 @@
     if (percent <= 115) return `Normal · ${percent}%`;
     return `Lively · ${percent}%`;
   }
+
+  // Only a few reminders carry a pose, so listing every one of them meant
+  // rows of "Generic" that said nothing. Show the ones that differ and
+  // count the rest.
+  let posedReminders = $derived(reminders.filter((r) => r.prop && PROP_LABELS[r.prop]));
+  let genericCount = $derived(reminders.length - posedReminders.length);
 </script>
 
 {#snippet characterPreview(pack: PackInfo, scale: number)}
@@ -385,22 +391,22 @@
   <section class="section card pad">
     <h2 class="section-title">Reminder poses</h2>
     <p class="section-subtitle">
-      Each reminder can give the character a fitting pose instead of the generic one — enable a
-      reminder in the Reminders tab to see it in action.
+      Some reminders give the character a fitting pose instead of its generic one.
     </p>
-    <div class="pose-list">
-      {#each reminders as reminder (reminder.id)}
-        <div class="pose-row" class:dim={!reminder.enabled}>
-          <span class="pose-emoji">{reminder.emoji}</span>
-          <span class="pose-title">{reminder.title}</span>
-          <span class="pose-arrow">→</span>
-          <span class="pose-tag">{PROP_LABELS[reminder.prop ?? ""] ?? "Generic"}</span>
-          {#if !reminder.enabled}
-            <span class="pose-off">off</span>
-          {/if}
-        </div>
-      {/each}
-    </div>
+    {#if posedReminders.length}
+      <div class="pose-tags">
+        {#each posedReminders as reminder (reminder.id)}
+          <span class="pose-tag" class:dim={!reminder.enabled}>
+            <span class="pose-emoji">{reminder.emoji}</span>
+            {reminder.title}
+            <span class="pose-prop">{PROP_LABELS[reminder.prop ?? ""]}</span>
+          </span>
+        {/each}
+      </div>
+    {/if}
+    <p class="pose-note">
+      The other {genericCount} use the character's generic pose.
+    </p>
   </section>
 {/if}
 
@@ -882,54 +888,42 @@
     white-space: nowrap;
   }
 
-  .pose-list {
+  .pose-tags {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .pose-row {
-    display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-1);
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-  }
-  .pose-row.dim {
-    opacity: 0.45;
-  }
-
-  .pose-emoji {
-    font-size: 1.1rem;
-    width: 1.5rem;
-    text-align: center;
-  }
-
-  .pose-title {
-    font-weight: 600;
-    color: var(--text);
-    min-width: 7rem;
-  }
-
-  .pose-arrow {
-    color: var(--text-faint);
+    margin-top: var(--space-1);
   }
 
   .pose-tag {
-    font-size: 0.75rem;
-    font-weight: 650;
-    color: var(--accent);
-    background: var(--accent-soft);
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.7rem 0.3rem 0.5rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background: var(--surface-sunken);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .pose-tag.dim {
+    opacity: 0.5;
   }
 
-  .pose-off {
-    margin-left: auto;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-faint);
+  .pose-emoji {
+    font-size: 0.95rem;
+  }
+
+  .pose-prop {
+    font-size: 0.72rem;
+    font-weight: 650;
+    color: var(--accent);
+  }
+
+  .pose-note {
+    margin: var(--space-3) 0 0;
+    font-size: 0.76rem;
+    color: var(--text-muted);
   }
 </style>

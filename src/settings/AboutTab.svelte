@@ -30,7 +30,13 @@
 <p class="panel-subtitle">Version info, where your data lives, and how to start fresh.</p>
 
 <section class="card pad identity-card">
-  <span class="mark">💧</span>
+  <!-- Same drawn mark as the sidebar rather than an emoji, so the app's
+       own identity doesn't change between two places in one window. -->
+  <span class="mark" aria-hidden="true">
+    <svg viewBox="0 0 16 16" width="22" height="22">
+      <path d="M8 1.6s4.3 4.8 4.3 7.6a4.3 4.3 0 0 1-8.6 0C3.7 6.4 8 1.6 8 1.6Z" fill="currentColor" />
+    </svg>
+  </span>
   <div>
     <span class="app-name">Companion</span>
     <span class="version">Version {version}</span>
@@ -67,8 +73,15 @@
   }
 
   .mark {
-    font-size: 2.2rem;
-    line-height: 1;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 11px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm);
   }
 
   .app-name {

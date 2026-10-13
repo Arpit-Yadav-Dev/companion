@@ -36,8 +36,19 @@
 {#if snapshot}
   <section class="hero-row">
     <div class="card hero-tile">
-      <span class="hero-value">{snapshot.today.glasses}<span class="hero-of">/{snapshot.today.goal}</span></span>
+      <span class="hero-value"
+        >{snapshot.today.glasses}<span class="hero-of">/{snapshot.today.goal}</span></span
+      >
       <span class="hero-label">Glasses today</span>
+      <!-- The day's progress is the one number people come here for, so
+           show it as a bar too rather than leaving them to divide. -->
+      <span class="hero-progress" aria-hidden="true">
+        <span
+          class="hero-progress-fill"
+          class:complete={snapshot.today.glasses >= snapshot.today.goal}
+          style="width: {Math.min(100, (snapshot.today.glasses / Math.max(1, snapshot.today.goal)) * 100)}%"
+        ></span>
+      </span>
     </div>
     <div class="card hero-tile">
       <span class="hero-value">{snapshot.currentStreak}<span class="hero-unit">d</span></span>
@@ -64,6 +75,16 @@
       width={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP)}
       height={CHART_HEIGHT + 22}
     >
+      <!-- The goal line turns each bar from a raw count into a pass/fail
+           at a glance; without it the bars only compare days to each
+           other, which isn't what the goal is for. -->
+      <line
+        class="goal-line"
+        x1="0"
+        y1="0.5"
+        x2={snapshot.lastSevenDays.length * (CHART_BAR_WIDTH + CHART_GAP) - CHART_GAP}
+        y2="0.5"
+      />
       {#each snapshot.lastSevenDays as day, i (day.date)}
         {@const goal = day.goal || 1}
         {@const ratio = Math.min(1, day.glasses / goal)}
@@ -137,6 +158,27 @@
     font-weight: 600;
   }
 
+  .hero-progress {
+    display: block;
+    width: 100%;
+    height: 5px;
+    margin-top: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+
+  .hero-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    transition: width 0.3s ease;
+  }
+  .hero-progress-fill.complete {
+    background: var(--success);
+  }
+
   .section {
     margin-bottom: var(--space-4);
   }
@@ -178,6 +220,12 @@
   }
   .bar-complete {
     fill: var(--accent);
+  }
+
+  .goal-line {
+    stroke: var(--border-strong);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
   }
 
   .axis-label {
