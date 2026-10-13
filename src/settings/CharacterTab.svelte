@@ -476,12 +476,6 @@
     margin-bottom: var(--space-3);
   }
 
-  .section-title {
-    margin: 0 0 var(--space-3) 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
-  }
   .section-header .section-title {
     margin-bottom: 0;
   }

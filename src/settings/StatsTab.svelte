@@ -237,11 +237,11 @@
     margin-bottom: var(--space-4);
   }
 
-  .section-title {
+  /* Only the title inside a flex header drops its margin — it's aligned
+     against the goal stepper there, so the gap would push it off the
+     baseline. Standalone titles keep the theme's spacing below them. */
+  .section-header .section-title {
     margin: 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
   }
 
   .goal-field {
@@ -319,7 +319,7 @@
   .response-bar {
     display: flex;
     width: 100%;
-    height: 10px;
+    height: 12px;
     border-radius: var(--radius-pill);
     overflow: hidden;
     background: var(--surface-sunken);

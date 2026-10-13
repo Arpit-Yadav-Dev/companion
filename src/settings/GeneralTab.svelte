@@ -169,12 +169,6 @@
     margin-bottom: var(--space-4);
   }
 
-  .section-title {
-    margin: 0 0 var(--space-4) 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text);
-  }
 
   .field {
     display: flex;
