@@ -1,3 +1,4 @@
+use std::sync::Mutex;
 use std::time::Duration;
 
 use chrono::{DateTime, Local};
@@ -16,6 +17,9 @@ pub struct TrayHandles<R: Runtime> {
     pub status_item: MenuItem<R>,
     pub next_at_item: MenuItem<R>,
     pub mute_item: MenuItem<R>,
+    /// Last text written to each item, so the ticker can skip writes that
+    /// would change nothing. See `refresh_tray_text`.
+    pub last_text: Mutex<(String, String, String)>,
 }
 
 /// The mute item's label doubles as its state, since a tray menu item has
@@ -90,6 +94,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         status_item: status_item.clone(),
         next_at_item: next_at_item.clone(),
         mute_item: mute_item.clone(),
+        last_text: Mutex::new((String::new(), String::new(), String::new())),
     });
 
     refresh_tray_text(app);
@@ -101,7 +106,10 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 fn start_tray_ticker<R: Runtime>(app: AppHandle<R>) {
     tauri::async_runtime::spawn(async move {
         loop {
-            tokio::time::sleep(Duration::from_secs(15)).await;
+            // The countdown now reads in minutes, so there's nothing to
+            // show for a faster tick — and every write is a chance to
+            // dismiss an open menu.
+            tokio::time::sleep(Duration::from_secs(30)).await;
             refresh_tray_text(&app);
         }
     });
@@ -121,8 +129,6 @@ pub fn refresh_tray_text<R: Runtime>(app: &AppHandle<R>) {
     } else {
         "⏸ Paused"
     };
-    let _ = handles.status_item.set_text(status_text);
-
     let next_at_text = match (&status.next_reminder_id, &status.next_fire_at) {
         (Some(_), Some(fire_at)) => match DateTime::parse_from_rfc3339(fire_at) {
             Ok(dt) => format_next_at(dt.with_timezone(&Local)),
@@ -130,8 +136,26 @@ pub fn refresh_tray_text<R: Runtime>(app: &AppHandle<R>) {
         },
         _ => "Next at — (no reminders enabled)".to_string(),
     };
-    let _ = handles.next_at_item.set_text(next_at_text);
-    let _ = handles.mute_item.set_text(mute_item_label(app));
+    let mute_text = mute_item_label(app);
+
+    // Only write what actually changed. Setting an NSMenuItem's title while
+    // its menu is on screen makes AppKit dismiss the menu, so a ticker that
+    // rewrites all three items every 15s closes the menu under the user
+    // while they're reading it — which is exactly what it looked like: the
+    // tray menu shutting itself a few seconds after opening.
+    let mut last = handles.last_text.lock().unwrap();
+    if last.0 != status_text {
+        let _ = handles.status_item.set_text(status_text);
+        last.0 = status_text.to_string();
+    }
+    if last.1 != next_at_text {
+        let _ = handles.next_at_item.set_text(&next_at_text);
+        last.1 = next_at_text;
+    }
+    if last.2 != mute_text {
+        let _ = handles.mute_item.set_text(mute_text);
+        last.2 = mute_text.to_string();
+    }
 }
 
 fn format_next_at(fire_at: DateTime<Local>) -> String {
@@ -139,12 +163,23 @@ fn format_next_at(fire_at: DateTime<Local>) -> String {
     let remaining = fire_at - now;
     let time_str = fire_at.format("%-I:%M %p").to_string();
 
+    // Minute precision, not seconds. Rewriting a menu item's title while
+    // the menu is open dismisses it on macOS, so a countdown that ticks
+    // every second guarantees the menu closes under the user. Minutes
+    // change at most once a minute, and the item is rebuilt each time the
+    // menu opens anyway, so the figure is still current when read.
     if remaining.num_seconds() <= 0 {
         format!("Next at {time_str} · due now")
+    } else if remaining.num_minutes() < 1 {
+        format!("Next at {time_str} · under a minute")
     } else {
         let mins = remaining.num_minutes();
-        let secs = remaining.num_seconds() % 60;
-        format!("Next at {time_str} · {mins}m {secs}s")
+        let hours = mins / 60;
+        if hours >= 1 {
+            format!("Next at {time_str} · in {hours}h {}m", mins % 60)
+        } else {
+            format!("Next at {time_str} · in {mins}m")
+        }
     }
 }
 

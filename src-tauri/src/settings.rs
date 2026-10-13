@@ -157,10 +157,21 @@ pub fn get_character_prefs<R: Runtime>(app: AppHandle<R>) -> CharacterPrefs {
     let Ok(store) = app.store(SETTINGS_STORE) else {
         return default_character();
     };
-    store
+    let mut prefs: CharacterPrefs = store
         .get("character")
         .and_then(|v| serde_json::from_value(v).ok())
-        .unwrap_or_else(default_character)
+        .unwrap_or_else(default_character);
+
+    // The saved character can stop existing: a downloaded pack deleted
+    // from disk, or one dropped from the catalog between versions. The
+    // overlay already falls back to the built-in character, but Settings
+    // would show nothing selected and the user would have no idea why, so
+    // point the preference back at something real.
+    let installed = crate::packs::list_packs(app.clone());
+    if !installed.iter().any(|p| p.manifest.id == prefs.active_pack_id) {
+        prefs.active_pack_id = default_character().active_pack_id;
+    }
+    prefs
 }
 
 #[tauri::command]
