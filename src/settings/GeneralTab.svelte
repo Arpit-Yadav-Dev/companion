@@ -5,6 +5,37 @@
 
   let prefs = $state<GeneralPrefs | null>(null);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let previewing = $state(false);
+
+  // Named levels rather than only a slider: "quiet enough for the office"
+  // is the decision people actually make, and a bare 0-100 track makes
+  // them guess which number means that.
+  const VOLUME_PRESETS = [
+    { label: "Quiet", value: 0.25 },
+    { label: "Medium", value: 0.55 },
+    { label: "Loud", value: 0.9 },
+  ];
+
+  function setVolume(value: number) {
+    if (!prefs) return;
+    prefs.soundVolume = value;
+    scheduleSave();
+    playPreview(value);
+  }
+
+  function previewSound() {
+    if (prefs) playPreview(prefs.soundVolume);
+  }
+
+  /** Plays the YES sound at a given level, so the slider can be set by ear
+   *  instead of by guessing what a percentage sounds like. */
+  function playPreview(volume: number) {
+    const audio = new Audio("/sounds/yes-clap.wav");
+    audio.volume = Math.min(Math.max(volume, 0), 1);
+    previewing = true;
+    audio.addEventListener("ended", () => (previewing = false));
+    void audio.play().catch(() => (previewing = false));
+  }
 
   onMount(async () => {
     prefs = await invoke<GeneralPrefs>("get_general_prefs");
@@ -91,7 +122,7 @@
     <label class="toggle-row">
       <span>
         <span class="toggle-label">Sound effects</span>
-        <span class="toggle-hint">A soft pop on entry, a cheerful ding on yes.</span>
+        <span class="toggle-hint">A soft pop on entry, applause on yes.</span>
       </span>
       <span class="switch">
         <input type="checkbox" bind:checked={prefs.soundEnabled} onchange={scheduleSave} />
@@ -100,8 +131,12 @@
     </label>
 
     {#if prefs.soundEnabled}
-      <label class="field volume-field">
-        <span class="field-label">Volume</span>
+      <div class="field volume-field">
+        <div class="volume-head">
+          <span class="field-label">Volume</span>
+          <span class="volume-value">{Math.round(prefs.soundVolume * 100)}%</span>
+        </div>
+
         <input
           type="range"
           min="0"
@@ -109,8 +144,28 @@
           step="0.05"
           bind:value={prefs.soundVolume}
           oninput={scheduleSave}
+          aria-label="Sound volume"
         />
-      </label>
+
+        <div class="volume-presets">
+          {#each VOLUME_PRESETS as preset (preset.label)}
+            <button
+              class="chip"
+              class:picked={Math.abs(prefs.soundVolume - preset.value) < 0.03}
+              onclick={() => setVolume(preset.value)}
+            >
+              {preset.label}
+            </button>
+          {/each}
+          <button class="link preview" onclick={previewSound}>
+            {previewing ? "Playing…" : "▸ Preview"}
+          </button>
+        </div>
+
+        <p class="toggle-hint">
+          Quiet suits a shared office; the preview plays at the level you've set.
+        </p>
+      </div>
     {/if}
   </section>
 {/if}
@@ -183,7 +238,72 @@
   }
 
   .volume-field {
-    margin-top: var(--space-1);
-    max-width: 280px;
+    margin-top: var(--space-2);
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .volume-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .volume-value {
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .volume-presets {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .chip {
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease,
+      border-color 0.12s ease;
+  }
+  .chip:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .chip.picked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  .link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    padding: 0;
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+
+  .preview {
+    margin-left: auto;
   }
 </style>

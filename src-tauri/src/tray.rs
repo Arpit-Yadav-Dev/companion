@@ -15,6 +15,17 @@ use crate::scheduler::{self, PauseDuration};
 pub struct TrayHandles<R: Runtime> {
     pub status_item: MenuItem<R>,
     pub next_at_item: MenuItem<R>,
+    pub mute_item: MenuItem<R>,
+}
+
+/// The mute item's label doubles as its state, since a tray menu item has
+/// no reliable checkmark: it names the action the click will perform.
+fn mute_item_label<R: Runtime>(app: &AppHandle<R>) -> &'static str {
+    if crate::settings::get_general_prefs(app.clone()).sound_enabled {
+        "Mute sounds"
+    } else {
+        "Unmute sounds"
+    }
 }
 
 /// Builds the static tray menu described in the brief and attaches it to a
@@ -44,6 +55,12 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let test_reminder_item =
         MenuItemBuilder::with_id("test_reminder", "Test reminder now").build(app)?;
 
+    // Muting is the thing people need *right now* — a meeting starts, a
+    // colleague sits down — so it belongs one click away in the tray
+    // rather than behind Settings. Its label carries the current state,
+    // since a tray menu has nowhere to show a checkmark reliably.
+    let mute_item = MenuItemBuilder::with_id("toggle_mute", mute_item_label(app)).build(app)?;
+
     let quit_item = MenuItemBuilder::with_id("quit", "Quit Companion").build(app)?;
 
     let menu = MenuBuilder::new(app)
@@ -53,6 +70,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .item(&settings_item)
         .item(&pause_submenu)
         .item(&test_reminder_item)
+        .item(&mute_item)
         .separator()
         .item(&quit_item)
         .build()?;
@@ -71,6 +89,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     app.manage(TrayHandles {
         status_item: status_item.clone(),
         next_at_item: next_at_item.clone(),
+        mute_item: mute_item.clone(),
     });
 
     refresh_tray_text(app);
@@ -112,6 +131,7 @@ pub fn refresh_tray_text<R: Runtime>(app: &AppHandle<R>) {
         _ => "Next at — (no reminders enabled)".to_string(),
     };
     let _ = handles.next_at_item.set_text(next_at_text);
+    let _ = handles.mute_item.set_text(mute_item_label(app));
 }
 
 fn format_next_at(fire_at: DateTime<Local>) -> String {
@@ -138,6 +158,12 @@ fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, id: &str) {
         }
         "test_reminder" => {
             scheduler::trigger_now(app, None);
+        }
+        "toggle_mute" => {
+            let mut prefs = crate::settings::get_general_prefs(app.clone());
+            prefs.sound_enabled = !prefs.sound_enabled;
+            crate::settings::save_general_prefs(app.clone(), prefs);
+            refresh_tray_text(app);
         }
         "pause_30m" => {
             scheduler::pause(app, PauseDuration::ThirtyMin);
