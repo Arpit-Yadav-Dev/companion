@@ -122,6 +122,14 @@
   }
 
   let activePack = $derived(packs.find((p) => p.manifest.id === prefs?.activePackId) ?? null);
+
+  // The two renderers behave differently enough to be worth separating:
+  // hand-drawn characters are tiny and always present, while video ones are
+  // heavier and (once the roster is final) downloaded on demand. Grouping
+  // them keeps that distinction obvious without the user needing to know
+  // the word "renderer".
+  let drawnPacks = $derived(packs.filter((p) => p.manifest.renderer !== "frames"));
+  let videoPacks = $derived(packs.filter((p) => p.manifest.renderer === "frames"));
 </script>
 
 {#snippet characterPreview(pack: PackInfo, scale: number)}
@@ -141,6 +149,26 @@
   {:else}
     <div class="placeholder">🖼️</div>
   {/if}
+{/snippet}
+
+{#snippet gallery(list: PackInfo[])}
+  <div class="gallery">
+    {#each list as pack (pack.manifest.id)}
+      <button
+        class="pack-card"
+        class:active={prefs?.activePackId === pack.manifest.id}
+        onclick={() => selectPack(pack.manifest.id)}
+      >
+        <div class="preview">
+          {@render characterPreview(pack, 1)}
+        </div>
+        <span class="pack-name">{pack.manifest.name}</span>
+        {#if prefs?.activePackId === pack.manifest.id}
+          <span class="active-badge">Active</span>
+        {/if}
+      </button>
+    {/each}
+  </div>
 {/snippet}
 
 <h1 class="panel-title">Character</h1>
@@ -171,23 +199,21 @@
       </button>
     </div>
 
-    <div class="gallery">
-      {#each packs as pack (pack.manifest.id)}
-        <button
-          class="pack-card"
-          class:active={prefs.activePackId === pack.manifest.id}
-          onclick={() => selectPack(pack.manifest.id)}
-        >
-          <div class="preview">
-            {@render characterPreview(pack, 0.78)}
-          </div>
-          <span class="pack-name">{pack.manifest.name}</span>
-          {#if prefs.activePackId === pack.manifest.id}
-            <span class="active-badge">Active</span>
-          {/if}
-        </button>
-      {/each}
-    </div>
+    {#if drawnPacks.length}
+      <div class="group-label">
+        <span class="group-name">Illustrated</span>
+        <span class="group-hint">Built in · tiny · {drawnPacks.length}</span>
+      </div>
+      {@render gallery(drawnPacks)}
+    {/if}
+
+    {#if videoPacks.length}
+      <div class="group-label">
+        <span class="group-name">Animated</span>
+        <span class="group-hint">From video · {videoPacks.length}</span>
+      </div>
+      {@render gallery(videoPacks)}
+    {/if}
 
     {#if importError}
       <p class="error">{importError}</p>
@@ -347,9 +373,17 @@
     width: 110px;
     height: 110px;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     overflow: hidden;
+  }
+
+  /* Same fit-to-box treatment as the gallery cards: characters are taller
+     than this tile, so scale them down rather than crop their heads. */
+  .hero-preview :global(> *) {
+    transform: scale(0.6);
+    transform-origin: bottom center;
+    flex: none;
   }
 
   .hero-info {
@@ -421,6 +455,24 @@
     gap: var(--space-3);
   }
 
+  .group-label {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: var(--space-4) 0 var(--space-2);
+  }
+
+  .group-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .group-hint {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
   .pack-card {
     position: relative;
     display: flex;
@@ -452,12 +504,22 @@
   }
 
   .preview {
-    height: 92px;
+    height: 108px;
     width: 100%;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     overflow: hidden;
+  }
+
+  /* Characters render at their own natural height (~160-170px), which is
+     taller than this box — previously the overflow simply cropped their
+     heads and feet. Scale the rendered character down to fit instead, from
+     the bottom so they stand on the card's floor rather than float. */
+  .preview :global(> *) {
+    transform: scale(var(--preview-fit, 0.62));
+    transform-origin: bottom center;
+    flex: none;
   }
 
   .placeholder {

@@ -236,14 +236,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Every character now reports its scaled size in real layout units
-       (SVG characters size via width/height; FramesCharacter mirrors its
-       canvas transform onto its wrapper), so flex reserves the right room
-       on its own and the gap is just breathing space. This used to carry
-       a large scale-dependent term to compensate for transform-scaled
-       characters growing over the buttons — that belonged in the
-       characters themselves, not here. */
-    gap: 0.75rem;
+    /* The column grows upward from the bottom of the strip, so a large
+       character plus bubble can run past the top of the overlay window and
+       clip the text. Cap the whole scene to the strip and let the
+       character shrink rather than the bubble disappear off-screen. */
+    max-height: calc(100vh - 3rem);
+    /* Every character reports its scaled size in real layout units (SVG
+       characters size via width/height; FramesCharacter mirrors its canvas
+       transform onto its wrapper), so flex reserves the resting height on
+       its own. Characters still draw past that box on purpose — jumps,
+       raised arms and waves all overflow — and the taller the character,
+       the further that reach extends. Grow the gap with scale so the
+       buttons stay clear of it instead of being drawn over. */
+    gap: calc(0.75rem + 2.5rem * max(var(--char-scale, 1) - 1, 0));
   }
 
   .scene.pos-bottom-left {
@@ -262,6 +267,20 @@
     pointer-events: auto;
     display: flex;
     justify-content: center;
+  }
+
+  /* Characters draw with overflow visible (jumps, raised arms, waves all
+     reach past their box), and the character comes after the bubble in DOM
+     order, so by default its art paints over the buttons and swallows the
+     clicks. The bubble must always win: it is the only part of the scene
+     the user has to be able to hit. */
+  .bubble-wrap {
+    position: relative;
+    z-index: 2;
+  }
+
+  .character-wrap {
+    z-index: 1;
   }
 
   /* Walk-in/out: slide between the screen edge and the resting spot. The
