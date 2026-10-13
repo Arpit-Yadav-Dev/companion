@@ -173,16 +173,15 @@
     </p>
 
     <div class="cta">
-      <a class="btn" href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_universal.dmg">
+      <a class="btn" id="primary-dl"
+         href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_universal.dmg">
         Download for Mac
       </a>
       <a class="btn btn-ghost" href="#install">How to install</a>
     </div>
-    <p class="meta">Free · 7 MB · macOS 12+ · Intel &amp; Apple Silicon</p>
-    <p class="meta">
-      <a href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_x64-setup.exe">Download for Windows</a>
-      — 3 MB, Windows 10 and 11. Newly built and not yet tested on a real
-      Windows machine, so expect rough edges.
+    <p class="meta" id="primary-meta">Free · 7 MB · macOS 12+ · Intel &amp; Apple Silicon</p>
+    <p class="meta" id="other-dl">
+      <a href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_x64-setup.exe">Also available for Windows</a>
     </p>
   </header>
 
@@ -237,7 +236,7 @@
 
   <section id="install">
     <h2>Installing it</h2>
-    <ol class="steps">
+    <ol class="steps" id="mac-steps">
       <li>
         <strong>Download the file</strong>
         <span>Companion_0.1.0_universal.dmg — one file, 7 MB, works on every Mac from 2017 on.</span>
@@ -258,7 +257,43 @@
       </li>
     </ol>
 
-    <div class="note">
+    <ol class="steps" id="windows-steps" hidden>
+      <li>
+        <strong>Download the installer</strong>
+        <span>Companion_0.1.0_x64-setup.exe — 3 MB, for Windows 10 and 11.</span>
+      </li>
+      <li>
+        <strong>Run it</strong>
+        <span>Double-click the downloaded file and follow the prompts.</span>
+      </li>
+      <li>
+        <strong>Click "More info", then "Run anyway"</strong>
+        <span>Windows SmartScreen warns about installers it hasn't seen before.
+              The warning hides the Run button behind <kbd>More info</kbd>.</span>
+      </li>
+      <li>
+        <strong>Look in your system tray</strong>
+        <span>A small face appears near the clock, bottom-right. You may need to
+              click the <kbd>^</kbd> arrow to see hidden icons.</span>
+      </li>
+    </ol>
+
+    <div class="note" id="windows-note" hidden>
+      <strong>.exe or .msi — which one?</strong>
+      Take the <strong>.exe</strong>. It's the normal installer and what the
+      button above gives you. The <strong>.msi</strong> is the same app in the
+      format IT departments use to deploy software across many machines at
+      once — useful if that's your situation, unnecessary otherwise.
+    </div>
+
+    <div class="note" id="windows-warning" hidden>
+      <strong>Brand new on Windows</strong>
+      The Windows build was compiled but has never been run on a Windows
+      machine. It may well have rough edges the Mac version doesn't —
+      <a href="https://github.com/Arpit-Yadav-Dev/companion/issues">tell me what breaks</a>.
+    </div>
+
+    <div class="note" id="mac-note">
       <strong>Why step 3?</strong>
       Opening it by double-clicking shows <em>"cannot be opened because the developer
       cannot be verified"</em> — macOS says that about any app not signed with a paid
@@ -276,6 +311,50 @@
     <p>Windows version is in testing.</p>
   </footer>
 </div>
+
+
+<script>
+  (function () {
+    var MAC = {
+      href: "https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_universal.dmg",
+      label: "Download for Mac",
+      meta: "Free \u00b7 7 MB \u00b7 macOS 12+ \u00b7 Intel &amp; Apple Silicon",
+      other: '<a href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_x64-setup.exe">Also available for Windows</a>'
+    };
+    var WIN = {
+      href: "https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_x64-setup.exe",
+      label: "Download for Windows",
+      meta: "Free \u00b7 3 MB \u00b7 Windows 10 and 11",
+      other: '<a href="https://github.com/Arpit-Yadav-Dev/companion/releases/latest/download/Companion_0.1.0_universal.dmg">Also available for Mac</a>'
+    };
+
+    var ua = navigator.userAgent || "";
+    var isWindows = /Windows|Win64|Win32/i.test(ua);
+    if (!isWindows) return;             // the page is already written for Mac
+
+    var pick = WIN;
+    var btn = document.getElementById("primary-dl");
+    var meta = document.getElementById("primary-meta");
+    var other = document.getElementById("other-dl");
+    if (btn) { btn.href = pick.href; btn.textContent = pick.label; }
+    if (meta) { meta.innerHTML = pick.meta; }
+    if (other) { other.innerHTML = pick.other; }
+
+    // The install steps below are macOS-specific; swap in the Windows ones.
+    var winSteps = document.getElementById("windows-steps");
+    var macSteps = document.getElementById("mac-steps");
+    if (winSteps && macSteps) {
+      winSteps.hidden = false;
+      macSteps.hidden = true;
+    }
+    ["windows-note", "windows-warning"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = false;
+    });
+    var macNote = document.getElementById("mac-note");
+    if (macNote) macNote.hidden = true;
+  })();
+</script>
 
 </body>
 </html>
