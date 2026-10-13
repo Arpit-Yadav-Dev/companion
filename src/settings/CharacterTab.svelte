@@ -33,10 +33,10 @@
     { value: "mint", label: "Mint" },
     { value: "night", label: "Night" },
   ];
-  const ENTRANCE_OPTIONS: { value: EntranceSidePref; label: string }[] = [
-    { value: "random", label: "Random (left or right)" },
-    { value: "left", label: "Always from left" },
-    { value: "right", label: "Always from right" },
+  const ENTRANCE_OPTIONS: { value: EntranceSidePref; label: string; short: string }[] = [
+    { value: "random", label: "Random (left or right)", short: "Either side" },
+    { value: "left", label: "Always from left", short: "Left" },
+    { value: "right", label: "Always from right", short: "Right" },
   ];
   const POSITION_OPTIONS: { value: PositionPref; label: string }[] = [
     { value: "bottom_left", label: "Bottom-left" },
@@ -130,6 +130,21 @@
   // the word "renderer".
   let drawnPacks = $derived(packs.filter((p) => p.manifest.renderer !== "frames"));
   let videoPacks = $derived(packs.filter((p) => p.manifest.renderer === "frames"));
+
+  // A bare percentage doesn't say much on its own — "80%" of what? Naming
+  // the setting's effect means the number only has to confirm a choice the
+  // label already made.
+  function sizeLabel(percent: number): string {
+    if (percent <= 75) return `Small · ${percent}%`;
+    if (percent <= 110) return `Normal · ${percent}%`;
+    return `Large · ${percent}%`;
+  }
+
+  function speedLabel(percent: number): string {
+    if (percent <= 60) return `Calm · ${percent}%`;
+    if (percent <= 115) return `Normal · ${percent}%`;
+    return `Lively · ${percent}%`;
+  }
 </script>
 
 {#snippet characterPreview(pack: PackInfo, scale: number)}
@@ -287,8 +302,11 @@
         </div>
       </label>
 
-      <label class="field">
-        <span class="field-label">Size — {prefs.sizePercent}%</span>
+      <div class="field">
+        <div class="slider-head">
+          <span class="field-label">Size</span>
+          <span class="slider-value">{sizeLabel(prefs.sizePercent)}</span>
+        </div>
         <input
           type="range"
           min="60"
@@ -296,35 +314,61 @@
           step="5"
           bind:value={prefs.sizePercent}
           oninput={scheduleSave}
+          aria-label="Character size"
         />
-      </label>
+      </div>
     </section>
 
     <section class="section card pad">
       <h2 class="section-title">Movement</h2>
 
-      <label class="field">
-        <span class="field-label">Entrance side</span>
-        <select bind:value={prefs.entranceSide} onchange={scheduleSave}>
-          {#each ENTRANCE_OPTIONS as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </label>
-
-      <label class="field">
-        <span class="field-label">Resting position</span>
-        <select bind:value={prefs.position} onchange={scheduleSave}>
+      <div class="field">
+        <span class="field-label">Where it stands</span>
+        <!-- A little screen diagram rather than a dropdown: the choice is
+             about a place on screen, and showing that place is clearer
+             (and quicker to scan) than reading three similar phrases. -->
+        <div class="position-picker">
           {#each POSITION_OPTIONS as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
+            <button
+              class="position-option pos-{opt.value}"
+              class:picked={prefs.position === opt.value}
+              onclick={() => {
+                if (prefs) prefs.position = opt.value;
+                scheduleSave();
+              }}
+              title={opt.label}
+              aria-label={opt.label}
+              aria-pressed={prefs.position === opt.value}
+            >
+              <span class="screen"><span class="dot"></span></span>
+            </button>
           {/each}
-        </select>
-      </label>
+        </div>
+      </div>
 
-      <label class="field">
-        <span class="field-label">
-          Animation speed — {prefs.animationSpeedPercent}%
-        </span>
+      <div class="field">
+        <span class="field-label">Walks in from</span>
+        <div class="chips">
+          {#each ENTRANCE_OPTIONS as opt (opt.value)}
+            <button
+              class="chip"
+              class:picked={prefs.entranceSide === opt.value}
+              onclick={() => {
+                if (prefs) prefs.entranceSide = opt.value;
+                scheduleSave();
+              }}
+            >
+              {opt.short}
+            </button>
+          {/each}
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="slider-head">
+          <span class="field-label">Animation speed</span>
+          <span class="slider-value">{speedLabel(prefs.animationSpeedPercent)}</span>
+        </div>
         <input
           type="range"
           min="25"
@@ -332,8 +376,9 @@
           step="5"
           bind:value={prefs.animationSpeedPercent}
           oninput={scheduleSave}
+          aria-label="Animation speed"
         />
-      </label>
+      </div>
     </section>
   </div>
 
@@ -562,8 +607,107 @@
     margin-bottom: 0;
   }
 
-  .field select {
-    width: 100%;
+  .slider-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .slider-value {
+    font-size: 0.76rem;
+    font-weight: 650;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .chip {
+    padding: 0.32rem 0.75rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 0.77rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease,
+      border-color 0.12s ease;
+  }
+  .chip:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .chip.picked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  /* Three small screens with a dot where the character would stand. */
+  .position-picker {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .position-option {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+
+  .screen {
+    display: block;
+    position: relative;
+    width: 58px;
+    height: 38px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border-strong);
+    background: var(--surface);
+    transition:
+      border-color 0.12s ease,
+      background 0.12s ease;
+  }
+
+  .dot {
+    position: absolute;
+    bottom: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    transition: background 0.12s ease;
+  }
+
+  .pos-bottom_left .dot {
+    left: 6px;
+  }
+  .pos-bottom_right .dot {
+    right: 6px;
+  }
+  .pos-bottom_center .dot {
+    left: 50%;
+    translate: -50% 0;
+  }
+
+  .position-option:hover .screen {
+    border-color: var(--text-faint);
+  }
+  .position-option.picked .screen {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .position-option.picked .dot {
+    background: var(--accent);
   }
 
   .theme-swatches {

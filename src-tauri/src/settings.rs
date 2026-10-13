@@ -51,7 +51,11 @@ fn default_general() -> GeneralPrefs {
         dnd: false,
         reduced_motion: false,
         sound_enabled: false,
-        sound_volume: 0.5,
+        // Deliberately quiet. A reminder interrupts whatever you're doing,
+        // so the sound should register without being startling — someone
+        // can always turn it up, but a loud first impression is the kind
+        // of thing people disable rather than adjust.
+        sound_volume: 0.25,
     }
 }
 
@@ -69,10 +73,38 @@ fn default_character() -> CharacterPrefs {
 #[tauri::command]
 pub fn get_reminders<R: Runtime>(app: AppHandle<R>) -> Vec<Reminder> {
     let store = app.store(SETTINGS_STORE).expect("settings store must open");
-    store
+    let saved: Vec<Reminder> = store
         .get("reminders")
         .and_then(|v| serde_json::from_value(v).ok())
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    if saved.is_empty() {
+        return crate::reminders::built_in_defaults();
+    }
+
+    // The saved list replaces the defaults wholesale, so built-ins added in
+    // a later version would never reach anyone who had already run the app.
+    // Append the ones they've never seen — disabled, like any new built-in,
+    // so this adds options rather than new interruptions. Reminders the
+    // user deliberately deleted are custom ones, which are never in this
+    // list, so nothing they removed comes back.
+    let mut merged = saved;
+    let known: std::collections::HashSet<&str> = merged.iter().map(|r| r.id.as_str()).collect();
+    let missing: Vec<Reminder> = crate::reminders::built_in_defaults()
+        .into_iter()
+        .filter(|d| !known.contains(d.id.as_str()))
+        .map(|mut d| {
+            d.enabled = false;
+            d
+        })
+        .collect();
+
+    if !missing.is_empty() {
+        merged.extend(missing);
+        store.set("reminders", serde_json::to_value(&merged).unwrap());
+        let _ = store.save();
+    }
+    merged
 }
 
 #[tauri::command]
