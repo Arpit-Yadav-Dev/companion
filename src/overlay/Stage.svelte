@@ -280,6 +280,17 @@
     --edge-room: 13rem;
   }
 
+  /* Position the lane so its centre sits --edge-room from the screen edge:
+     the lane is half its own width wide of its left edge, so subtract that.
+     Clamped at 1rem so a character scaled up past the available room still
+     stays on screen rather than being pushed off it. */
+  .scene.pos-bottom-left {
+    left: max(1rem, calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2));
+  }
+  .scene.pos-bottom-right {
+    right: max(1rem, calc(var(--edge-room) - 190px * var(--char-scale, 1) / 2));
+  }
+
   .scene.pos-bottom-center {
     left: 50%;
     translate: -50% 0;
@@ -324,8 +335,9 @@
      that distance, set per position below. */
   .bubble-wrap > :global(*) {
     flex: none;
-    max-width: min(68vw, calc(var(--edge-room, 50vw) * 2 - 1.5rem));
+    max-width: min(68vw, calc(var(--edge-room, 50vw) * 2 - 3rem));
   }
+
 
   /* Characters draw with overflow visible (jumps, raised arms, waves all
      reach past their box), and the character comes after the bubble in DOM
