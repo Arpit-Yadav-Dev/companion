@@ -240,6 +240,7 @@
 
 {#snippet castArt(pack: PackInfo)}
   {@const Character = svgCharacterFor(pack.manifest.id)}
+  <span class="cast-draw">
   {#if Character}
     <Character sceneState="idle" theme={characterPrefs?.theme ?? "blue"} scale={1} />
   {:else if pack.manifest.renderer === "svg"}
@@ -253,6 +254,7 @@
       maxFramesPerState={1}
     />
   {/if}
+  </span>
 {/snippet}
 
 <header class="panel-head">
@@ -699,7 +701,10 @@
 
   .cast-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+    /* Wide enough that the broadest thumbnail (Robin, 94px at this
+       height) fits without max-width shrinking it — otherwise the wider
+       characters render shorter than the rest and the row looks ragged. */
+    grid-template-columns: repeat(auto-fill, minmax(102px, 1fr));
     gap: var(--space-2);
   }
 
@@ -728,26 +733,35 @@
     background: var(--accent-soft);
   }
 
-  /* Characters draw at their own natural height, which is taller than
-     this tile; scale them to fit rather than cropping heads and feet. */
   .cast-art {
-    height: 52px;
+    height: 58px;
     width: 100%;
     display: flex;
     align-items: flex-end;
     justify-content: center;
     overflow: hidden;
   }
-  .cast-art :global(> *) {
-    transform: scale(0.3);
+
+  /* Drawn characters render at ~170px natively, so they're scaled to fit
+     the tile. The scale lives on this wrapper rather than on every child
+     of .cast-art: that broader rule also hit the downloaded characters'
+     <img>, shrinking an already-fitted thumbnail to a third of its size,
+     so they showed up as specks beside the drawn ones. */
+  .cast-draw {
+    display: block;
+    transform: scale(0.33);
     transform-origin: bottom center;
     flex: none;
   }
 
+  /* The thumbnail is already cropped to its subject, so it only needs
+     fitting to the tile. */
   .cast-thumb {
-    max-height: 52px;
+    height: 100%;
     width: auto;
+    max-width: 100%;
     object-fit: contain;
+    transform: none;
   }
 
   .cast-name {
