@@ -748,7 +748,14 @@
      <img>, shrinking an already-fitted thumbnail to a third of its size,
      so they showed up as specks beside the drawn ones. */
   .cast-draw {
-    display: block;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    /* An explicit box rather than letting the character size it: a frames
+       character measures zero until its first bitmap decodes, which would
+       collapse this wrapper and leave the tile blank in the meantime. */
+    height: 176px;
+    width: 176px;
     transform: scale(0.33);
     transform-origin: bottom center;
     flex: none;
