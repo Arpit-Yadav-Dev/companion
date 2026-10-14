@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
   import type {
     Reminder,
     DayOfWeek,
     PackInfo,
     CatalogEntry,
     CharacterPrefs,
+    DownloadProgress,
   } from "../shared/types";
   import { svgCharacterFor } from "../overlay/characterRegistry";
   import SvgCharacter from "../overlay/SvgCharacter.svelte";
@@ -37,6 +39,9 @@
   let testedId = $state<string | null>(null);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let characterPrefs = $state<CharacterPrefs | null>(null);
+  /** id -> 0-100, or null while a download has started but has no total. */
+  let downloading = $state<Record<string, number | null>>({});
+  let downloadFailed = $state<Record<string, string>>({});
 
   // Matches CATALOG_BASE_URL in src-tauri/src/packs.rs — previews for
   // characters that aren't installed come from the release, since their
@@ -81,6 +86,11 @@
   ];
 
   onMount(async () => {
+    const unlisten = listen<DownloadProgress>("pack://download-progress", (event) => {
+      downloading = { ...downloading, [event.payload.id]: event.payload.percent };
+    });
+    onDestroy(() => void unlisten.then((off) => off()));
+
     [reminders, installedPacks, catalog, characterPrefs] = await Promise.all([
       invoke<Reminder[]>("get_reminders"),
       invoke<PackInfo[]>("list_packs"),
@@ -191,6 +201,28 @@
   function removeReminder(id: string) {
     reminders = reminders.filter((r) => r.id !== id);
     scheduleSave();
+  }
+
+  /** Assigns a character to a reminder, fetching it first if it isn't
+   *  installed. Picking a character that then silently doesn't appear is
+   *  worse than a short wait, so the download happens here rather than
+   *  sending the user to the Character tab to do it themselves. */
+  async function chooseCharacter(reminder: Reminder, choice: { id: string; installed: boolean }) {
+    reminder.characterPackId = choice.id;
+    scheduleSave();
+    if (choice.installed || choice.id in downloading) return;
+
+    downloadFailed = { ...downloadFailed, [choice.id]: "" };
+    downloading = { ...downloading, [choice.id]: null };
+    try {
+      await invoke<PackInfo>("download_pack", { id: choice.id });
+      installedPacks = await invoke<PackInfo[]>("list_packs");
+    } catch (e) {
+      downloadFailed = { ...downloadFailed, [choice.id]: String(e) };
+    } finally {
+      const { [choice.id]: _done, ...rest } = downloading;
+      downloading = rest;
+    }
   }
 
   function testReminder(id: string) {
@@ -478,10 +510,7 @@
                   class="cast-option"
                   class:picked={reminder.characterPackId === choice.id}
                   class:not-installed={!choice.installed}
-                  onclick={() => {
-                    reminder.characterPackId = choice.id;
-                    scheduleSave();
-                  }}
+                  onclick={() => chooseCharacter(reminder, choice)}
                   title={choice.installed ? choice.name : `${choice.name} — download in the Character tab`}
                 >
                   <span class="cast-art">
@@ -497,12 +526,22 @@
                     {/if}
                   </span>
                   <span class="cast-name">{choice.name}</span>
-                  {#if !choice.installed}
-                    <span class="cast-badge" aria-label="Not downloaded yet">↓</span>
+                  {#if choice.id in downloading}
+                    <span class="cast-badge busy" aria-label="Downloading">
+                      {downloading[choice.id] ?? ""}
+                    </span>
+                  {:else if !choice.installed}
+                    <span class="cast-badge" aria-label="Downloads when picked">↓</span>
                   {/if}
                 </button>
               {/each}
             </div>
+            {#if reminder.characterPackId && downloadFailed[reminder.characterPackId]}
+              <p class="field-hint failed">
+                Couldn't download {reminder.characterPackId} — this reminder uses the
+                default until it succeeds. Check your connection and pick it again.
+              </p>
+            {/if}
           </div>
 
           {#if reminder.id.startsWith("custom-")}
@@ -724,6 +763,10 @@
   .cast-option.not-installed .cast-art {
     opacity: 0.55;
   }
+  .field-hint.failed {
+    color: var(--danger);
+  }
+
   .cast-badge {
     position: absolute;
     top: 4px;
@@ -737,6 +780,15 @@
     font-weight: 700;
     display: grid;
     place-items: center;
+  }
+
+  /* Wider while a percentage is showing than it is as a bare arrow. */
+  .cast-badge.busy {
+    width: auto;
+    min-width: 15px;
+    padding: 0 4px;
+    border-radius: var(--radius-pill);
+    font-size: 0.55rem;
   }
 
   .field-hint code {
