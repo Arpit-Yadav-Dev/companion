@@ -1,13 +1,52 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import type { Reminder, DayOfWeek, PackInfo } from "../shared/types";
+  import type {
+    Reminder,
+    DayOfWeek,
+    PackInfo,
+    CatalogEntry,
+    CharacterPrefs,
+  } from "../shared/types";
+  import { svgCharacterFor } from "../overlay/characterRegistry";
+  import SvgCharacter from "../overlay/SvgCharacter.svelte";
+  import FramesCharacter from "../overlay/FramesCharacter.svelte";
 
   let reminders = $state<Reminder[]>([]);
   let installedPacks = $state<PackInfo[]>([]);
+  let catalog = $state<CatalogEntry[]>([]);
+
+  /** Every character the user could pick: the ones installed, plus the
+   *  ones available to download. A reminder can name a character that
+   *  isn't installed yet — it falls back until the user downloads it —
+   *  so limiting this list to installed packs would hide exactly the
+   *  character a reminder is best paired with. */
+  let choosablePacks = $derived.by(() => {
+    const seen = new Set<string>();
+    const out: { id: string; name: string; installed: boolean; pack?: PackInfo }[] = [];
+    for (const p of installedPacks) {
+      seen.add(p.manifest.id);
+      out.push({ id: p.manifest.id, name: p.manifest.name, installed: true, pack: p });
+    }
+    for (const c of catalog) {
+      if (!seen.has(c.id)) out.push({ id: c.id, name: c.name, installed: false });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  });
   let expandedId = $state<string | null>(null);
   let testedId = $state<string | null>(null);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let characterPrefs = $state<CharacterPrefs | null>(null);
+
+  // Matches CATALOG_BASE_URL in src-tauri/src/packs.rs — previews for
+  // characters that aren't installed come from the release, since their
+  // artwork isn't on disk yet.
+  const CATALOG_PREVIEW_BASE =
+    "https://github.com/Arpit-Yadav-Dev/companion/releases/download/characters-v1";
+
+  let defaultPack = $derived(
+    installedPacks.find((p) => p.manifest.id === characterPrefs?.activePackId) ?? null,
+  );
 
   const DAY_LABELS: { value: DayOfWeek; short: string }[] = [
     { value: 1, short: "M" },
@@ -42,9 +81,11 @@
   ];
 
   onMount(async () => {
-    [reminders, installedPacks] = await Promise.all([
+    [reminders, installedPacks, catalog, characterPrefs] = await Promise.all([
       invoke<Reminder[]>("get_reminders"),
       invoke<PackInfo[]>("list_packs"),
+      invoke<CatalogEntry[]>("list_catalog"),
+      invoke<CharacterPrefs>("get_character_prefs"),
     ]);
   });
 
@@ -164,6 +205,23 @@
 
   let enabledCount = $derived(reminders.filter((r) => r.enabled).length);
 </script>
+
+{#snippet castArt(pack: PackInfo)}
+  {@const Character = svgCharacterFor(pack.manifest.id)}
+  {#if Character}
+    <Character sceneState="idle" theme={characterPrefs?.theme ?? "blue"} scale={1} />
+  {:else if pack.manifest.renderer === "svg"}
+    <SvgCharacter sceneState="idle" theme={characterPrefs?.theme ?? "blue"} scale={1} />
+  {:else}
+    <FramesCharacter
+      sceneState="idle"
+      manifest={pack.manifest}
+      packDir={pack.dir}
+      scale={1}
+      maxFramesPerState={1}
+    />
+  {/if}
+{/snippet}
 
 <header class="panel-head">
   <div>
@@ -396,39 +454,55 @@
           <div class="field">
             <span class="field-label">Who delivers it</span>
             <p class="field-hint">
-              Each reminder can have its own character. "Default" uses whichever one is
-              picked in the Character tab.
+              "Default" uses whichever character is picked in the Character tab.
             </p>
-            <div class="chips">
+            <div class="cast-grid">
               <button
-                class="chip"
+                class="cast-option"
                 class:picked={!reminder.characterPackId}
                 onclick={() => {
                   reminder.characterPackId = null;
                   scheduleSave();
                 }}
               >
-                Default
+                <span class="cast-art">
+                  {#if defaultPack}
+                    {@render castArt(defaultPack)}
+                  {/if}
+                </span>
+                <span class="cast-name">Default</span>
               </button>
-              {#each installedPacks as pack (pack.manifest.id)}
+
+              {#each choosablePacks as choice (choice.id)}
                 <button
-                  class="chip"
-                  class:picked={reminder.characterPackId === pack.manifest.id}
+                  class="cast-option"
+                  class:picked={reminder.characterPackId === choice.id}
+                  class:not-installed={!choice.installed}
                   onclick={() => {
-                    reminder.characterPackId = pack.manifest.id;
+                    reminder.characterPackId = choice.id;
                     scheduleSave();
                   }}
+                  title={choice.installed ? choice.name : `${choice.name} — download in the Character tab`}
                 >
-                  {pack.manifest.name}
+                  <span class="cast-art">
+                    {#if choice.pack}
+                      {@render castArt(choice.pack)}
+                    {:else}
+                      <img
+                        class="cast-thumb"
+                        src="{CATALOG_PREVIEW_BASE}/preview-{choice.id}.webp"
+                        alt=""
+                        loading="lazy"
+                      />
+                    {/if}
+                  </span>
+                  <span class="cast-name">{choice.name}</span>
+                  {#if !choice.installed}
+                    <span class="cast-badge" aria-label="Not downloaded yet">↓</span>
+                  {/if}
                 </button>
               {/each}
             </div>
-            {#if reminder.characterPackId && !installedPacks.some((p) => p.manifest.id === reminder.characterPackId)}
-              <p class="field-hint missing">
-                {reminder.characterPackId} isn't installed — download it in the Character tab,
-                or this reminder uses the default.
-              </p>
-            {/if}
           </div>
 
           {#if reminder.id.startsWith("custom-")}
@@ -584,8 +658,85 @@
     color: var(--text-muted);
   }
 
-  .field-hint.missing {
-    color: var(--warning);
+  .cast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+    gap: var(--space-2);
+  }
+
+  .cast-option {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-2) 4px 6px;
+    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    transition:
+      border-color 0.12s ease,
+      background 0.12s ease;
+  }
+  .cast-option:hover {
+    border-color: var(--text-faint);
+  }
+  .cast-option.picked {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Characters draw at their own natural height, which is taller than
+     this tile; scale them to fit rather than cropping heads and feet. */
+  .cast-art {
+    height: 52px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .cast-art :global(> *) {
+    transform: scale(0.3);
+    transform-origin: bottom center;
+    flex: none;
+  }
+
+  .cast-thumb {
+    max-height: 52px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .cast-name {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* A character that still needs downloading is dimmed and flagged, so
+     picking one doesn't silently fall back to the default. */
+  .cast-option.not-installed .cast-art {
+    opacity: 0.55;
+  }
+  .cast-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 0.6rem;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
   }
 
   .field-hint code {
