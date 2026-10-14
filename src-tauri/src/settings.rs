@@ -13,6 +13,8 @@ use crate::reminders::Reminder;
 use crate::stats::{self, DailyStats};
 
 const SETTINGS_STORE: &str = "settings.json";
+/// Marks that the one-time backfill of per-reminder characters has run.
+const CHARACTER_PAIRING_KEY: &str = "characterPairingApplied";
 const STATS_STORE: &str = "stats.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,19 +93,54 @@ pub fn get_reminders<R: Runtime>(app: AppHandle<R>) -> Vec<Reminder> {
     // user deliberately deleted are custom ones, which are never in this
     // list, so nothing they removed comes back.
     let mut merged = saved;
+    let defaults = crate::reminders::built_in_defaults();
     let known: std::collections::HashSet<&str> = merged.iter().map(|r| r.id.as_str()).collect();
-    let missing: Vec<Reminder> = crate::reminders::built_in_defaults()
-        .into_iter()
+    let missing: Vec<Reminder> = defaults
+        .iter()
         .filter(|d| !known.contains(d.id.as_str()))
+        .cloned()
         .map(|mut d| {
             d.enabled = false;
             d
         })
         .collect();
 
-    if !missing.is_empty() {
+    // A field added in a later version deserializes to its default for
+    // everyone who already has reminders saved, so the built-in pairings
+    // would only ever reach fresh installs. Fill them in once.
+    //
+    // Once only, because None also means "the user picked Default" — a
+    // backfill on every load would silently undo that choice the next time
+    // the app started. The marker records that this has happened, so a
+    // deliberate Default survives.
+    let already_paired = store
+        .get(CHARACTER_PAIRING_KEY)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mut filled = 0;
+    if !already_paired {
+        for r in merged.iter_mut() {
+            if r.character_pack_id.is_none() {
+                if let Some(d) = defaults.iter().find(|d| d.id == r.id) {
+                    if d.character_pack_id.is_some() {
+                        r.character_pack_id = d.character_pack_id.clone();
+                        filled += 1;
+                    }
+                }
+            }
+        }
+        store.set(CHARACTER_PAIRING_KEY, serde_json::Value::Bool(true));
+    }
+
+    let changed = !missing.is_empty() || filled > 0;
+    if changed {
         merged.extend(missing);
         store.set("reminders", serde_json::to_value(&merged).unwrap());
+    }
+    // Save whenever anything changed — including a run that filled nothing
+    // but still set the marker, or the marker would never stick and the
+    // backfill would run again on the next launch.
+    if changed || !already_paired {
         let _ = store.save();
     }
     merged

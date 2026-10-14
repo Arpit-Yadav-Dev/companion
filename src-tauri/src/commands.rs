@@ -27,6 +27,9 @@ pub struct ReminderShowPayload {
     /// "ask" state, e.g. "bottle" | "stretch" | "lookfar" | "posture".
     /// None falls back to the character's generic ask pose.
     pub prop: Option<String>,
+    /// The character this reminder asked for. None means the overlay uses
+    /// whatever the Character tab has selected.
+    pub character_pack_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

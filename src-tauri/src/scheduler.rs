@@ -133,15 +133,12 @@ fn load_settings<R: Runtime>(app: &AppHandle<R>) -> LoadedSettings {
         };
     };
 
-    let reminders = store
-        .get("reminders")
-        .and_then(|v| serde_json::from_value::<Vec<Reminder>>(v).ok())
-        .unwrap_or_else(|| {
-            let defaults = built_in_defaults();
-            store.set("reminders", serde_json::to_value(&defaults).unwrap());
-            let _ = store.save();
-            defaults
-        });
+    // Deliberately the same accessor Settings uses, rather than reading the
+    // key directly: that one also merges in built-ins added since the user
+    // first ran the app and backfills their default characters. Loading the
+    // raw key here meant the scheduler fired reminders with no character
+    // while Settings showed one.
+    let reminders = crate::settings::get_reminders(app.clone());
 
     // GeneralPrefs (name, dnd, start-paused, ...) lives under the
     // "general" key as one nested object — see settings::GeneralPrefs /
@@ -411,6 +408,7 @@ fn fire<R: Runtime>(app: &AppHandle<R>, reminder: &Reminder) {
         later_label: reminder.later_label.clone(),
         snooze_min: reminder.snooze_min,
         prop: reminder.prop.clone(),
+        character_pack_id: reminder.character_pack_id.clone(),
     };
     drop(inner);
 

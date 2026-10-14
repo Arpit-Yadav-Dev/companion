@@ -25,6 +25,12 @@ pub struct Reminder {
     pub later_label: String,
     pub snooze_min: u32,
     pub prop: Option<String>,
+    /// Which character delivers this reminder. `None` uses whatever is
+    /// selected in the Character tab, which is what every reminder did
+    /// before this existed — so old saved reminders deserialize to None
+    /// and keep behaving exactly as they did.
+    #[serde(default)]
+    pub character_pack_id: Option<String>,
 }
 
 const ALL_DAYS: [u8; 7] = [0, 1, 2, 3, 4, 5, 6];
@@ -65,6 +71,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "YES".into(),
             later_label: "Remind me later".into(),
             snooze_min: 10,
+            character_pack_id: Some("droplet".into()),
             prop: Some("bottle".into()),
         },
         Reminder {
@@ -79,6 +86,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Done!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 10,
+            character_pack_id: Some("dancer".into()),
             prop: Some("stretch".into()),
         },
         Reminder {
@@ -93,6 +101,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Done!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 5,
+            character_pack_id: Some("koala".into()),
             prop: Some("lookfar".into()),
         },
         Reminder {
@@ -107,6 +116,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Fixed!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 10,
+            character_pack_id: Some("coach".into()),
             prop: Some("posture".into()),
         },
         Reminder {
@@ -121,6 +131,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Done!".into(),
             later_label: "Remind me later".into(),
             snooze_min: 15,
+            character_pack_id: Some("dash".into()),
             prop: None,
         },
         // Everyday reminders. The ones above repeat through the day to
@@ -141,6 +152,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Taken".into(),
             later_label: "In a bit".into(),
             snooze_min: 15,
+            character_pack_id: Some("nurse".into()),
             prop: None,
         },
         Reminder {
@@ -158,6 +170,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Going now".into(),
             later_label: "Ten more minutes".into(),
             snooze_min: 10,
+            character_pack_id: Some("robin".into()),
             prop: None,
         },
         Reminder {
@@ -175,6 +188,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Done".into(),
             later_label: "Not now".into(),
             snooze_min: 20,
+            character_pack_id: Some("nimbus".into()),
             prop: None,
         },
         Reminder {
@@ -192,6 +206,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "On it".into(),
             later_label: "Still working".into(),
             snooze_min: 15,
+            character_pack_id: Some("scout3d".into()),
             prop: None,
         },
         Reminder {
@@ -209,6 +224,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Heading out".into(),
             later_label: "One more thing".into(),
             snooze_min: 20,
+            character_pack_id: Some("ruby".into()),
             prop: None,
         },
         Reminder {
@@ -226,6 +242,7 @@ pub fn built_in_defaults() -> Vec<Reminder> {
             yes_label: "Logging off".into(),
             later_label: "Not yet".into(),
             snooze_min: 20,
+            character_pack_id: Some("luna".into()),
             prop: None,
         },
     ]

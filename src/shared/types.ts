@@ -14,6 +14,9 @@ export interface ReminderShowPayload {
    * state, e.g. "bottle" | "stretch" | "lookfar" | "posture". Undefined
    * falls back to the character's generic ask pose. */
   prop?: string | null;
+  /** The character this reminder asked for; undefined uses the one
+   * selected in the Character tab. */
+  characterPackId?: string | null;
 }
 
 export interface ReminderResponsePayload {
@@ -50,6 +53,8 @@ export interface Reminder {
   laterLabel: string;
   snoozeMin: number;
   prop: string | null;
+  /** Which character delivers this reminder; null uses the global one. */
+  characterPackId?: string | null;
 }
 
 export type PauseDuration = "thirty_min" | "one_hour" | "until_tomorrow";

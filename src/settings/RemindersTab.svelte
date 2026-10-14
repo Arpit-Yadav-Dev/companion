@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import type { Reminder, DayOfWeek } from "../shared/types";
+  import type { Reminder, DayOfWeek, PackInfo } from "../shared/types";
 
   let reminders = $state<Reminder[]>([]);
+  let installedPacks = $state<PackInfo[]>([]);
   let expandedId = $state<string | null>(null);
   let testedId = $state<string | null>(null);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -41,7 +42,10 @@
   ];
 
   onMount(async () => {
-    reminders = await invoke<Reminder[]>("get_reminders");
+    [reminders, installedPacks] = await Promise.all([
+      invoke<Reminder[]>("get_reminders"),
+      invoke<PackInfo[]>("list_packs"),
+    ]);
   });
 
   function scheduleSave() {
@@ -389,6 +393,44 @@
             </div>
           </div>
 
+          <div class="field">
+            <span class="field-label">Who delivers it</span>
+            <p class="field-hint">
+              Each reminder can have its own character. "Default" uses whichever one is
+              picked in the Character tab.
+            </p>
+            <div class="chips">
+              <button
+                class="chip"
+                class:picked={!reminder.characterPackId}
+                onclick={() => {
+                  reminder.characterPackId = null;
+                  scheduleSave();
+                }}
+              >
+                Default
+              </button>
+              {#each installedPacks as pack (pack.manifest.id)}
+                <button
+                  class="chip"
+                  class:picked={reminder.characterPackId === pack.manifest.id}
+                  onclick={() => {
+                    reminder.characterPackId = pack.manifest.id;
+                    scheduleSave();
+                  }}
+                >
+                  {pack.manifest.name}
+                </button>
+              {/each}
+            </div>
+            {#if reminder.characterPackId && !installedPacks.some((p) => p.manifest.id === reminder.characterPackId)}
+              <p class="field-hint missing">
+                {reminder.characterPackId} isn't installed — download it in the Character tab,
+                or this reminder uses the default.
+              </p>
+            {/if}
+          </div>
+
           {#if reminder.id.startsWith("custom-")}
             <div class="card-footer">
               <button class="btn btn-danger btn-small" onclick={() => removeReminder(reminder.id)}>
@@ -540,6 +582,10 @@
     margin: 0;
     font-size: 0.76rem;
     color: var(--text-muted);
+  }
+
+  .field-hint.missing {
+    color: var(--warning);
   }
 
   .field-hint code {

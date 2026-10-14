@@ -28,7 +28,8 @@
   let characterPrefs = $state<CharacterPrefs | null>(null);
   let generalPrefs = $state<GeneralPrefs | null>(null);
   let activeFramesPack = $state<PackInfo | null>(null);
-  let ActiveCharacter = $derived(svgCharacterFor(characterPrefs?.activePackId));
+  let activePackId = $state<string | undefined>(undefined);
+  let ActiveCharacter = $derived(svgCharacterFor(activePackId));
 
   const director = new Director({
     onStateChange: (s) => (sceneState = s),
@@ -113,9 +114,18 @@
           invoke<GeneralPrefs>("get_general_prefs"),
           invoke<PackInfo[]>("list_packs"),
         ]);
+        // A reminder can name its own character; fall back to the one
+        // chosen in the Character tab. The named pack may not be
+        // installed — it's only a suggestion until the user downloads it —
+        // so check before using it rather than ending up with nothing.
+        const requested = event.payload.characterPackId;
+        const requestedInstalled =
+          !!requested && packs.some((p) => p.manifest.id === requested);
+        activePackId = requestedInstalled ? requested! : characterPrefs.activePackId;
+
         activeFramesPack =
           packs.find(
-            (p) => p.manifest.id === characterPrefs?.activePackId && p.manifest.renderer === "frames",
+            (p) => p.manifest.id === activePackId && p.manifest.renderer === "frames",
           ) ?? null;
 
         const prefersReducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
