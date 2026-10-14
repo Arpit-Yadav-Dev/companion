@@ -37,6 +37,61 @@ pub struct CatalogEntry {
     pub preview: String,
 }
 
+/// Catalog published alongside the packs, so adding a character doesn't
+/// require everyone to reinstall the app to see it.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteCatalog {
+    characters: Vec<RemoteEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteEntry {
+    id: String,
+    name: String,
+    description: String,
+    size_mb: f32,
+}
+
+/// Fetches the published catalog, or returns `None` if it can't be reached
+/// or doesn't parse. Callers fall back to the built-in list, which is why
+/// this swallows errors rather than surfacing them: a character the user
+/// can't see yet is a far smaller problem than a Character tab that fails
+/// to load because the network is down.
+async fn fetch_catalog() -> Option<Vec<CatalogEntry>> {
+    let url = format!("{CATALOG_BASE_URL}/catalog.json");
+    let response = reqwest::get(&url).await.ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    // Parsed from bytes rather than response.json(), which needs
+    // reqwest's "json" feature; serde_json is already a dependency.
+    let body = response.bytes().await.ok()?;
+    let remote: RemoteCatalog = serde_json::from_slice(&body).ok()?;
+    if remote.characters.is_empty() {
+        return None;
+    }
+    Some(
+        remote
+            .characters
+            .into_iter()
+            .map(|e| CatalogEntry {
+                url: format!("{CATALOG_BASE_URL}/{}.zip", e.id),
+                // Previews are published too, since a remote catalog can
+                // name a character whose thumbnail was never bundled.
+                preview: format!("{CATALOG_BASE_URL}/preview-{}.webp", e.id),
+                id: e.id,
+                name: e.name,
+                description: e.description,
+                size_mb: e.size_mb,
+            })
+            .collect(),
+    )
+}
+
+/// The characters this build knows about. Used until the published
+/// catalog is fetched, and whenever it can't be.
 fn catalog() -> Vec<CatalogEntry> {
     [
         ("ace", "Ace", "A teen with a tennis racket", 2.6),
@@ -76,13 +131,15 @@ fn catalog() -> Vec<CatalogEntry> {
 /// The downloadable characters, each flagged with whether it's already
 /// installed so the UI can show "Download" vs nothing.
 #[tauri::command]
-pub fn list_catalog<R: Runtime>(app: AppHandle<R>) -> Vec<CatalogEntryStatus> {
+pub async fn list_catalog<R: Runtime>(app: AppHandle<R>) -> Vec<CatalogEntryStatus> {
     let installed: Vec<String> = list_packs(app)
         .into_iter()
         .map(|p| p.manifest.id)
         .collect();
 
-    catalog()
+    fetch_catalog()
+        .await
+        .unwrap_or_else(catalog)
         .into_iter()
         .map(|entry| CatalogEntryStatus {
             installed: installed.contains(&entry.id),
