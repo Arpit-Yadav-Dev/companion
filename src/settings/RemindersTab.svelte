@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import type {
@@ -85,18 +85,27 @@
     "😮‍💨", "📵", "📖", "✏️", "🌿", "⏰",
   ];
 
-  onMount(async () => {
+  // Not an async callback: onMount's cleanup is its return value, and a
+  // lifecycle call after an await throws — which took the whole component
+  // down with it, so the tab rendered with no reminders at all.
+  onMount(() => {
     const unlisten = listen<DownloadProgress>("pack://download-progress", (event) => {
       downloading = { ...downloading, [event.payload.id]: event.payload.percent };
     });
-    onDestroy(() => void unlisten.then((off) => off()));
 
-    [reminders, installedPacks, catalog, characterPrefs] = await Promise.all([
-      invoke<Reminder[]>("get_reminders"),
-      invoke<PackInfo[]>("list_packs"),
-      invoke<CatalogEntry[]>("list_catalog"),
-      invoke<CharacterPrefs>("get_character_prefs"),
-    ]);
+    void (async () => {
+      // Local reads first, so the tab paints immediately. The catalog is
+      // a network call and only adds the not-yet-downloaded characters to
+      // the picker, so it must not hold up everything else.
+      [reminders, installedPacks, characterPrefs] = await Promise.all([
+        invoke<Reminder[]>("get_reminders"),
+        invoke<PackInfo[]>("list_packs"),
+        invoke<CharacterPrefs>("get_character_prefs"),
+      ]);
+      catalog = await invoke<CatalogEntry[]>("list_catalog");
+    })();
+
+    return () => void unlisten.then((off) => off());
   });
 
   function scheduleSave() {

@@ -61,7 +61,15 @@ struct RemoteEntry {
 /// to load because the network is down.
 async fn fetch_catalog() -> Option<Vec<CatalogEntry>> {
     let url = format!("{CATALOG_BASE_URL}/catalog.json");
-    let response = reqwest::get(&url).await.ok()?;
+    // Bounded, because the Character and Reminders tabs await this before
+    // rendering: an unbounded request leaves both blank for as long as the
+    // network takes, and GitHub's CDN is slow from some connections. Four
+    // seconds then falls back to the built-in list.
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(4))
+        .build()
+        .ok()?;
+    let response = client.get(&url).send().await.ok()?;
     if !response.status().is_success() {
         return None;
     }

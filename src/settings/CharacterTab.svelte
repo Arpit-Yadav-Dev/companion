@@ -55,12 +55,14 @@
 
   onMount(() => {
     void (async () => {
-      [prefs, packs, reminders, catalog] = await Promise.all([
+      // The catalog is fetched over the network; everything else is local.
+      // Awaiting them together left the whole tab blank until it returned.
+      [prefs, packs, reminders] = await Promise.all([
         invoke<CharacterPrefs>("get_character_prefs"),
         invoke<PackInfo[]>("list_packs"),
         invoke<Reminder[]>("get_reminders"),
-        invoke<CatalogEntry[]>("list_catalog"),
       ]);
+      catalog = await invoke<CatalogEntry[]>("list_catalog");
     })();
 
     const unlisten = listen<DownloadProgress>("pack://download-progress", (event) => {
