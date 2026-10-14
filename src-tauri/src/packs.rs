@@ -40,12 +40,14 @@ pub struct CatalogEntry {
 fn catalog() -> Vec<CatalogEntry> {
     [
         ("ace", "Ace", "A teen with a tennis racket", 2.6),
+        ("dancing-dog", "Dancing Dog", "A 3D cartoon dog with plenty of energy", 2.5),
         ("champ", "Champ", "A kid who jumps for joy", 2.8),
         ("coach", "Coach", "A doctor who lifts weights", 3.9),
         ("dancer", "Dancer", "A woman dancing in a yellow coat", 3.1),
         ("dash", "Dash", "A boy running past with a burger", 4.2),
         ("dentist", "Dentist", "A dentist in blue scrubs", 2.5),
         ("droplet", "Droplet", "A 3D water drop, perfect for water reminders", 3.8),
+        ("ellie", "Ellie", "A cheerful pink cartoon elephant", 2.7),
         ("germ", "Germ", "A googly-eyed cartoon virus", 5.4),
         ("kettle", "Kettle", "A gym-goer with a kettlebell", 2.9),
         ("kitty", "Kitty", "A hand-drawn pink cat", 6.6),

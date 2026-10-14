@@ -1,16 +1,17 @@
 # Companion
 
-> **Work in progress.** macOS is in good shape and builds a working
-> universal `.dmg`; Windows is not built yet. Expect rough edges.
+> **Work in progress.** Both macOS and Windows build and run. The Windows
+> build is much younger and has had far less use, so expect rough edges
+> there first.
 
 A tiny menu-bar desktop mascot that reminds you to drink water, stretch,
 rest your eyes, and move — by walking onto your screen, asking a quick
 yes/no question, and walking back off. Built with Tauri v2 (Rust) +
 Svelte 5 + TypeScript.
 
-Currently macOS-first (Apple Silicon + Intel); Windows support is planned
-but not yet built — see `PLATFORM_NOTES.md` for exactly what's
-macOS-specific and what Windows will need.
+macOS (Apple Silicon + Intel) and Windows 10/11. macOS came first and is
+the more tested of the two; see `PLATFORM_NOTES.md` for what's
+platform-specific.
 
 ## Features
 
@@ -20,8 +21,8 @@ macOS-specific and what Windows will need.
   with a bold sticker-style speech bubble, and reacts to your answer — all
   while staying click-through everywhere except the character and its
   buttons, so it never gets in your way
-- **33 characters.** Fourteen are drawn in SVG and ship with the app
-  (4 KB each), so it works offline from first launch. Nineteen more are
+- **35 characters.** Fourteen are drawn in SVG and ship with the app
+  (4 KB each), so it works offline from first launch. Twenty-one more are
   animated from video and download on demand, 2-7 MB each — that keeps the
   installer at ~7 MB instead of ~75 MB
 - Eleven built-in reminders — water, stretch, 20-20-20 eye rest, posture,

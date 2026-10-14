@@ -67,6 +67,11 @@ clips/
 /packs/tiny
 /packs/tiny.zip
 
+# Pack build output. The *-src folders are the only copy of a pack's
+# frames once its zip is uploaded, so they stay on disk even though
+# they're too big to commit.
+/dist/
+
 # Credentials — never commit. .env was already covered; these are the
 # other shapes a key or certificate tends to arrive in.
 *.pem
